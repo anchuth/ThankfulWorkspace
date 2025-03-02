@@ -17,7 +17,7 @@ export interface IStorage {
   getReceivedThanksForUser(userId: number): Promise<Thanks[]>;
   getSentThanksForUser(userId: number): Promise<Thanks[]>;
   getRankings(period: "week" | "month" | "quarter" | "year"): Promise<{userId: number, points: number}[]>;
-  sessionStore: session.SessionStore;
+  sessionStore: session.Store;
 }
 
 export class MemStorage implements IStorage {
@@ -25,7 +25,7 @@ export class MemStorage implements IStorage {
   private thanks: Map<number, Thanks>;
   private currentUserId: number;
   private currentThanksId: number;
-  sessionStore: session.SessionStore;
+  sessionStore: session.Store;
 
   constructor() {
     this.users = new Map();
@@ -33,7 +33,7 @@ export class MemStorage implements IStorage {
     this.currentUserId = 1;
     this.currentThanksId = 1;
     this.sessionStore = new MemoryStore({
-      checkPeriod: 86400000,
+      checkPeriod: 86400000, // 24h
     });
   }
 
@@ -49,7 +49,14 @@ export class MemStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = this.currentUserId++;
-    const user: User = { ...insertUser, id, role: "employee" };
+    const user: User = {
+      id,
+      username: insertUser.username,
+      password: insertUser.password,
+      name: insertUser.name,
+      managerId: insertUser.managerId || null,
+      role: "employee"
+    };
     this.users.set(id, user);
     return user;
   }
