@@ -1,7 +1,9 @@
 import { pgTable, text, serial, integer, timestamp, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { relations } from "drizzle-orm";
 
+// Users table
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(), // Employee ID
@@ -11,6 +13,7 @@ export const users = pgTable("users", {
   role: text("role", { enum: ["employee", "manager", "admin"] }).notNull().default("employee"),
 });
 
+// Thanks table
 export const thanks = pgTable("thanks", {
   id: serial("id").primaryKey(),
   fromId: integer("from_id").notNull().references(() => users.id),
@@ -22,6 +25,38 @@ export const thanks = pgTable("thanks", {
   points: integer("points").notNull().default(1),
 });
 
+// Relations
+export const usersRelations = relations(users, ({ one, many }) => ({
+  manager: one(users, {
+    fields: [users.managerId],
+    references: [users.id],
+  }),
+  employees: many(users, {
+    fields: [users.id],
+    references: [users.managerId],
+  }),
+  thanksReceived: many(thanks, {
+    fields: [users.id],
+    references: [thanks.toId],
+  }),
+  thanksSent: many(thanks, {
+    fields: [users.id],
+    references: [thanks.fromId],
+  }),
+}));
+
+export const thanksRelations = relations(thanks, ({ one }) => ({
+  sender: one(users, {
+    fields: [thanks.fromId],
+    references: [users.id],
+  }),
+  receiver: one(users, {
+    fields: [thanks.toId],
+    references: [users.id],
+  }),
+}));
+
+// Schemas for validation
 export const insertUserSchema = createInsertSchema(users)
   .pick({
     username: true,
@@ -39,6 +74,7 @@ export const insertThanksSchema = createInsertSchema(thanks)
     message: true,
   });
 
+// Types for TypeScript
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type Thanks = typeof thanks.$inferSelect;

@@ -1,8 +1,11 @@
-import { InsertUser, User, Thanks, InsertThanks } from "@shared/schema";
+import { InsertUser, User, Thanks, InsertThanks, users, thanks } from "@shared/schema";
 import session from "express-session";
-import createMemoryStore from "memorystore";
+import { db } from "./db";
+import { eq, desc, and, gte } from "drizzle-orm";
+import connectPg from "connect-pg-simple";
+import { pool } from "./db";
 
-const MemoryStore = createMemoryStore(session);
+const PostgresSessionStore = connectPg(session);
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
@@ -20,115 +23,108 @@ export interface IStorage {
   sessionStore: session.Store;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private thanks: Map<number, Thanks>;
-  private currentUserId: number;
-  private currentThanksId: number;
+export class DatabaseStorage implements IStorage {
   sessionStore: session.Store;
 
   constructor() {
-    this.users = new Map();
-    this.thanks = new Map();
-    this.currentUserId = 1;
-    this.currentThanksId = 1;
-    this.sessionStore = new MemoryStore({
-      checkPeriod: 86400000, // 24h
+    this.sessionStore = new PostgresSessionStore({
+      pool,
+      createTableIfMissing: true,
     });
   }
 
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.currentUserId++;
-    const user: User = {
-      id,
-      username: insertUser.username,
-      password: insertUser.password,
-      name: insertUser.name,
-      managerId: insertUser.managerId || null,
-      role: "employee"
-    };
-    this.users.set(id, user);
+    const [user] = await db.insert(users).values(insertUser).returning();
     return user;
   }
 
   async getUsersByManagerId(managerId: number): Promise<User[]> {
-    return Array.from(this.users.values()).filter(
-      (user) => user.managerId === managerId,
-    );
+    return await db.select().from(users).where(eq(users.managerId, managerId));
   }
 
   async getAllUsers(): Promise<User[]> {
-    return Array.from(this.users.values());
+    return await db.select().from(users);
   }
 
-  async createThanks(fromId: number, thanks: InsertThanks): Promise<Thanks> {
-    const id = this.currentThanksId++;
-    const newThanks: Thanks = {
-      id,
-      fromId,
-      toId: thanks.toId,
-      message: thanks.message,
-      createdAt: new Date(),
-      status: "pending",
-      approvedAt: null,
-      points: 1,
-    };
-    this.thanks.set(id, newThanks);
-    return newThanks;
+  async createThanks(fromId: number, insertThanks: InsertThanks): Promise<Thanks> {
+    const [thanks] = await db
+      .insert(thanks)
+      .values({
+        fromId,
+        toId: insertThanks.toId,
+        message: insertThanks.message,
+      })
+      .returning();
+    return thanks;
   }
 
   async getThanksById(id: number): Promise<Thanks | undefined> {
-    return this.thanks.get(id);
+    const [thanks] = await db.select().from(thanks).where(eq(thanks.id, id));
+    return thanks;
   }
 
   async getPendingThanksForManager(managerId: number): Promise<Thanks[]> {
     const managedUsers = await this.getUsersByManagerId(managerId);
-    const managedUserIds = new Set(managedUsers.map((u) => u.id));
-    
-    return Array.from(this.thanks.values()).filter(
-      (thanks) => thanks.status === "pending" && managedUserIds.has(thanks.toId),
-    );
+    const managedUserIds = managedUsers.map((u) => u.id);
+
+    return await db
+      .select()
+      .from(thanks)
+      .where(
+        and(
+          eq(thanks.status, "pending"),
+          thanks.toId.in(managedUserIds)
+        )
+      );
   }
 
   async updateThanksStatus(id: number, status: "approved" | "rejected"): Promise<Thanks> {
-    const thanks = await this.getThanksById(id);
-    if (!thanks) throw new Error("Thanks not found");
-    
-    const updated: Thanks = {
-      ...thanks,
-      status,
-      approvedAt: status === "approved" ? new Date() : null,
-    };
-    this.thanks.set(id, updated);
+    const [updated] = await db
+      .update(thanks)
+      .set({
+        status,
+        approvedAt: status === "approved" ? new Date() : null,
+      })
+      .where(eq(thanks.id, id))
+      .returning();
     return updated;
   }
 
   async getReceivedThanksForUser(userId: number): Promise<Thanks[]> {
-    return Array.from(this.thanks.values()).filter(
-      (thanks) => thanks.toId === userId && thanks.status === "approved",
-    );
+    return await db
+      .select()
+      .from(thanks)
+      .where(
+        and(
+          eq(thanks.toId, userId),
+          eq(thanks.status, "approved")
+        )
+      )
+      .orderBy(desc(thanks.createdAt));
   }
 
   async getSentThanksForUser(userId: number): Promise<Thanks[]> {
-    return Array.from(this.thanks.values()).filter(
-      (thanks) => thanks.fromId === userId,
-    );
+    return await db
+      .select()
+      .from(thanks)
+      .where(eq(thanks.fromId, userId))
+      .orderBy(desc(thanks.createdAt));
   }
 
   async getRankings(period: "week" | "month" | "quarter" | "year"): Promise<{userId: number, points: number}[]> {
     const now = new Date();
     let cutoff = new Date();
-    
+
     switch (period) {
       case "week":
         cutoff.setDate(now.getDate() - 7);
@@ -144,14 +140,24 @@ export class MemStorage implements IStorage {
         break;
     }
 
+    const thanksRows = await db
+      .select({
+        userId: thanks.toId,
+        points: thanks.points,
+      })
+      .from(thanks)
+      .where(
+        and(
+          eq(thanks.status, "approved"),
+          gte(thanks.approvedAt, cutoff)
+        )
+      );
+
     const pointsMap = new Map<number, number>();
-    
-    Array.from(this.thanks.values())
-      .filter((thanks) => thanks.status === "approved" && thanks.approvedAt! >= cutoff)
-      .forEach((thanks) => {
-        const current = pointsMap.get(thanks.toId) || 0;
-        pointsMap.set(thanks.toId, current + thanks.points);
-      });
+    thanksRows.forEach(({ userId, points }) => {
+      const current = pointsMap.get(userId) || 0;
+      pointsMap.set(userId, current + points);
+    });
 
     return Array.from(pointsMap.entries())
       .map(([userId, points]) => ({ userId, points }))
@@ -159,4 +165,4 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
