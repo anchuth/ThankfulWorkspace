@@ -9,6 +9,7 @@ import {
   UserCircle,
   Award,
   Menu,
+  Users,
 } from "lucide-react";
 import {
   Sheet,
@@ -22,6 +23,7 @@ type NavItem = {
   name: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
+  roles?: string[];
 };
 
 const navigation: NavItem[] = [
@@ -40,15 +42,25 @@ const navigation: NavItem[] = [
     href: "/profile",
     icon: UserCircle,
   },
+  {
+    name: "Quản lý nhân viên",
+    href: "/employees",
+    icon: Users,
+    roles: ["admin", "manager"],
+  },
 ];
 
 export function Navbar() {
   const { user, logoutMutation } = useAuth();
   const [location] = useLocation();
 
+  const filteredNavigation = navigation.filter(
+    item => !item.roles || item.roles.includes(user?.role || '')
+  );
+
   const NavLinks = () => (
     <>
-      {navigation.map((item) => {
+      {filteredNavigation.map((item) => {
         const Icon = item.icon;
         const isActive = location === item.href;
         return (

@@ -10,14 +10,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all users (for user selection)
   app.get("/api/users", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (req.user!.role !== "admin") return res.sendStatus(403);
     const users = await storage.getAllUsers();
     res.json(users);
+  });
+
+  // Get users managed by a manager
+  app.get("/api/users/manager/:managerId", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (req.user!.role !== "manager") return res.sendStatus(403);
+
+    const managerId = parseInt(req.params.managerId);
+    if (managerId !== req.user!.id) return res.sendStatus(403);
+
+    const users = await storage.getUsersByManagerId(managerId);
+    res.json(users);
+  });
+
+  // Update user's manager (admin only)
+  app.patch("/api/users/:userId/manager", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (req.user!.role !== "admin") return res.sendStatus(403);
+
+    const userId = parseInt(req.params.userId);
+    const { managerId } = req.body;
+
+    const user = await storage.updateUserManager(userId, managerId);
+    res.json(user);
   });
 
   // Send thanks
   app.post("/api/thanks", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    
+
     const parsed = insertThanksSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json(parsed.error);
 

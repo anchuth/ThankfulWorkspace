@@ -13,6 +13,7 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   getUsersByManagerId(managerId: number): Promise<User[]>;
   getAllUsers(): Promise<User[]>;
+  updateUserManager(userId: number, managerId: number | null): Promise<User>;
   createThanks(fromId: number, thanks: InsertThanks): Promise<Thanks>;
   getThanksById(id: number): Promise<Thanks | undefined>;
   getPendingThanksForManager(managerId: number): Promise<Thanks[]>;
@@ -54,6 +55,15 @@ export class DatabaseStorage implements IStorage {
 
   async getAllUsers(): Promise<User[]> {
     return await db.select().from(users);
+  }
+
+  async updateUserManager(userId: number, managerId: number | null): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({ managerId })
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
   }
 
   async createThanks(fromId: number, insertThanks: InsertThanks): Promise<Thanks> {
