@@ -49,43 +49,41 @@ export function Navbar() {
           </div>
 
           {/* Navigation */}
-          <div className="hidden md:block">
-            <div className="flex items-center space-x-4">
-              {navigation.map((item) => {
-                const Icon = item.icon;
-                const isActive = location === item.href;
-                return (
-                  <Link key={item.name} href={item.href}>
-                    <Button
-                      variant={isActive ? "default" : "ghost"}
-                      className={cn(
-                        "flex items-center",
-                        isActive && "bg-primary text-primary-foreground"
-                      )}
-                    >
-                      <Icon className="h-4 w-4 mr-2" />
-                      {item.name}
-                    </Button>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* User menu */}
           <div className="flex items-center space-x-4">
-            <span className="text-sm hidden md:block">
-              Xin chào, <span className="font-medium">{user?.name}</span>
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => logoutMutation.mutate()}
-              disabled={logoutMutation.isPending}
-            >
-              <LogOut className="h-4 w-4 mr-2" />
-              Đăng xuất
-            </Button>
+            {navigation.map((item) => {
+              const Icon = item.icon;
+              const isActive = location === item.href;
+              return (
+                <Link key={item.name} href={item.href}>
+                  <Button
+                    variant={isActive ? "default" : "ghost"}
+                    className={cn(
+                      "flex items-center",
+                      isActive && "bg-primary text-primary-foreground"
+                    )}
+                  >
+                    <Icon className="h-4 w-4 mr-2" />
+                    {item.name}
+                  </Button>
+                </Link>
+              );
+            })}
+
+            {/* User menu */}
+            <div className="flex items-center space-x-4">
+              <span className="text-sm">
+                Xin chào, <span className="font-medium">{user?.name}</span>
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => logoutMutation.mutate()}
+                disabled={logoutMutation.isPending}
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Đăng xuất
+              </Button>
+            </div>
           </div>
         </div>
       </div>
