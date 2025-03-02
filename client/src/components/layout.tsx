@@ -39,19 +39,19 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <nav className="space-y-1">
                 {navigation.map((item) => {
                   const Icon = item.icon;
+                  const isActive = location === item.href;
                   return (
                     <Link key={item.name} href={item.href}>
-                      <a
+                      <Button
+                        variant={isActive ? "default" : "ghost"}
                         className={cn(
-                          "flex items-center px-4 py-2 rounded-md text-sm font-medium transition-colors",
-                          location === item.href
-                            ? "bg-primary text-primary-foreground"
-                            : "hover:bg-gray-50",
+                          "w-full justify-start",
+                          isActive && "bg-primary text-primary-foreground"
                         )}
                       >
                         <Icon className="h-5 w-5 mr-3" />
                         {item.name}
-                      </a>
+                      </Button>
                     </Link>
                   );
                 })}

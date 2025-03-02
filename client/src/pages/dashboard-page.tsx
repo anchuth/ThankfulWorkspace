@@ -28,6 +28,13 @@ export default function DashboardPage() {
   return (
     <Layout>
       <div className="space-y-8">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">Analytics Dashboard</h1>
+          <p className="text-muted-foreground">
+            Track your recognition statistics and view rankings
+          </p>
+        </div>
+
         <section className="grid gap-4 md:grid-cols-3">
           <StatsCard
             title="Received"
@@ -50,27 +57,36 @@ export default function DashboardPage() {
         </section>
 
         <section>
-          <h2 className="text-2xl font-bold mb-4">Rankings</h2>
-          <Tabs defaultValue="week">
-            <TabsList>
-              <TabsTrigger value="week">Weekly</TabsTrigger>
-              <TabsTrigger value="month">Monthly</TabsTrigger>
-              <TabsTrigger value="quarter">Quarterly</TabsTrigger>
-              <TabsTrigger value="year">Yearly</TabsTrigger>
-            </TabsList>
-            <TabsContent value="week">
-              <Rankings period="week" />
-            </TabsContent>
-            <TabsContent value="month">
-              <Rankings period="month" />
-            </TabsContent>
-            <TabsContent value="quarter">
-              <Rankings period="quarter" />
-            </TabsContent>
-            <TabsContent value="year">
-              <Rankings period="year" />
-            </TabsContent>
-          </Tabs>
+          <Card>
+            <CardHeader>
+              <CardTitle>Rankings</CardTitle>
+              <CardDescription>
+                See who's received the most recognition over time
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Tabs defaultValue="week">
+                <TabsList className="grid w-full grid-cols-4">
+                  <TabsTrigger value="week">Weekly</TabsTrigger>
+                  <TabsTrigger value="month">Monthly</TabsTrigger>
+                  <TabsTrigger value="quarter">Quarterly</TabsTrigger>
+                  <TabsTrigger value="year">Yearly</TabsTrigger>
+                </TabsList>
+                <TabsContent value="week">
+                  <Rankings period="week" />
+                </TabsContent>
+                <TabsContent value="month">
+                  <Rankings period="month" />
+                </TabsContent>
+                <TabsContent value="quarter">
+                  <Rankings period="quarter" />
+                </TabsContent>
+                <TabsContent value="year">
+                  <Rankings period="year" />
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
         </section>
       </div>
     </Layout>
