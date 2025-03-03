@@ -273,7 +273,7 @@ export default function EmployeeManagementPage() {
       employeeIds: number[];
       title?: string;
       department?: string;
-      managerId?: string;
+      managerId?: string | null;
     }) => {
       const res = await apiRequest("PATCH", "/api/users/bulk-update", data);
       return res.json();
@@ -424,15 +424,17 @@ export default function EmployeeManagementPage() {
     }
   };
 
-  // Handle bulk update submit
+  // Update the bulk update submit handler
   const onBulkUpdateSubmit = (data: any) => {
     const updateData: any = {
       employeeIds: selectedEmployees,
     };
 
-    if (data.title) updateData.title = data.title;
-    if (data.department) updateData.department = data.department;
-    if (data.managerId) updateData.managerId = data.managerId === "none" ? null : parseInt(data.managerId);
+    if (data.title?.trim()) updateData.title = data.title.trim();
+    if (data.department?.trim()) updateData.department = data.department.trim();
+    if (data.managerId && data.managerId !== "unchanged") {
+      updateData.managerId = data.managerId === "none" ? null : parseInt(data.managerId);
+    }
 
     bulkUpdateMutation.mutate(updateData);
   };
@@ -529,7 +531,7 @@ export default function EmployeeManagementPage() {
                     <Input {...bulkUpdateForm.register("department")} />
                   </div>
                   <div className="space-y-2">
-                    <Label>Quản lý trực tiếp (để trống nếu không thay đổi)</Label>
+                    <Label>Quản lý trực tiếp</Label>
                     <Select
                       value={bulkUpdateForm.watch("managerId")}
                       onValueChange={(value) => bulkUpdateForm.setValue("managerId", value)}
@@ -538,7 +540,7 @@ export default function EmployeeManagementPage() {
                         <SelectValue placeholder="Chọn quản lý" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Không thay đổi</SelectItem>
+                        <SelectItem value="unchanged">Giữ nguyên quản lý hiện tại</SelectItem>
                         <SelectItem value="none">Xóa quản lý</SelectItem>
                         {managers?.map((manager) => (
                           <SelectItem key={manager.id} value={manager.id.toString()}>
