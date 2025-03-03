@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { insertThanksSchema } from "@shared/schema";
+import { insertUserSchema } from "@shared/schema"; // Added import for user schema
 
 export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
@@ -201,6 +202,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     ]);
 
     res.json({ received, sent });
+  });
+
+  // Bulk import users (admin only)
+  app.post("/api/users/bulk-import", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (req.user!.role !== "admin") return res.sendStatus(403);
+
+    const users = req.body;
+    if (!Array.isArray(users)) {
+      return res.status(400).send("Invalid data format");
+    }
+
+    try {
+      // Validate each user
+      for (const user of users) {
+        const parsed = insertUserSchema.safeParse(user);
+        if (!parsed.success) {
+          return res.status(400).json({
+            error: "Validation failed",
+            details: parsed.error,
+            user: user.username,
+          });
+        }
+      }
+
+      // Insert all users
+      const createdUsers = await storage.createManyUsers(users);
+      res.json(createdUsers);
+    } catch (error) {
+      console.error("Bulk import error:", error);
+      res.status(500).send("Failed to import users");
+    }
   });
 
   const httpServer = createServer(app);

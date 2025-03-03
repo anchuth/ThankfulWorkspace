@@ -36,8 +36,9 @@ import { Redirect } from "wouter";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useForm } from "react-hook-form";
-import { Search, Plus, Trash2 } from "lucide-react";
+import { Search, Plus, Trash2, Download, Upload } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
+import * as XLSX from 'xlsx';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -50,6 +51,8 @@ export default function EmployeeManagementPage() {
   const [filterRole, setFilterRole] = useState<string>("all");
   const [filterDepartment, setFilterDepartment] = useState<string>("all");
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [importData, setImportData] = useState<any[]>([]);
 
   const form = useForm({
     defaultValues: {
@@ -162,6 +165,23 @@ export default function EmployeeManagementPage() {
     },
   });
 
+  // Mutation để import nhân viên hàng loạt
+  const importEmployeesMutation = useMutation({
+    mutationFn: async (data: any[]) => {
+      const res = await apiRequest("POST", "/api/users/bulk-import", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      setShowImportDialog(false);
+      toast({
+        title: "Import thành công",
+        description: "Đã thêm danh sách nhân viên mới vào hệ thống",
+      });
+    },
+  });
+
+
   // Redirect if not manager/admin
   if (user?.role !== "manager" && user?.role !== "admin") {
     return <Redirect to="/" />;
@@ -193,15 +213,15 @@ export default function EmployeeManagementPage() {
 
   // Filter and paginate employees
   const filteredEmployees = employees?.filter(employee => {
-    const matchesSearch = 
+    const matchesSearch =
       searchTerm === "" ||
       employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       employee.username.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesRole = 
+    const matchesRole =
       filterRole === "all" || employee.role === filterRole;
 
-    const matchesDepartment = 
+    const matchesDepartment =
       filterDepartment === "all" || employee.department === filterDepartment;
 
     return matchesSearch && matchesRole && matchesDepartment;
@@ -215,6 +235,40 @@ export default function EmployeeManagementPage() {
 
   // Get unique departments for filter
   const departments = [...new Set(employees?.map(e => e.department).filter(Boolean))];
+
+  const handleDownloadTemplate = () => {
+    const template = [
+      {
+        username: "mã_số_nhân_viên",
+        password: "mật_khẩu",
+        name: "họ_và_tên",
+        title: "chức_danh",
+        department: "bộ_phận",
+        role: "employee/manager",
+      },
+    ];
+
+    const ws = XLSX.utils.json_to_sheet(template);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Template");
+    XLSX.writeFile(wb, "employee_import_template.xlsx");
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const bstr = evt.target?.result;
+      const wb = XLSX.read(bstr, { type: "binary" });
+      const wsname = wb.SheetNames[0];
+      const ws = wb.Sheets[wsname];
+      const data = XLSX.utils.sheet_to_json(ws);
+      setImportData(data);
+    };
+    reader.readAsBinaryString(file);
+  };
 
   return (
     <Layout>
@@ -342,6 +396,75 @@ export default function EmployeeManagementPage() {
                     </Button>
                   </DialogFooter>
                 </form>
+              </DialogContent>
+            </Dialog>
+          )}
+
+          {user?.role === "admin" && (
+            <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
+              <DialogTrigger asChild>
+                <Button variant="outline">
+                  <Upload className="w-4 h-4 mr-2" />
+                  Import nhân viên
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Import danh sách nhân viên</DialogTitle>
+                  <DialogDescription>
+                    Tải lên file Excel chứa danh sách nhân viên cần thêm vào hệ thống
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4">
+                    <Button variant="outline" onClick={handleDownloadTemplate}>
+                      <Download className="w-4 h-4 mr-2" />
+                      Tải template
+                    </Button>
+                    <Input
+                      type="file"
+                      accept=".xlsx,.xls"
+                      onChange={handleFileUpload}
+                    />
+                  </div>
+
+                  {importData.length > 0 && (
+                    <>
+                      <div className="border rounded-md">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Mã số</TableHead>
+                              <TableHead>Họ và tên</TableHead>
+                              <TableHead>Chức danh</TableHead>
+                              <TableHead>Bộ phận</TableHead>
+                              <TableHead>Chức vụ</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {importData.map((item, index) => (
+                              <TableRow key={index}>
+                                <TableCell>{item.username}</TableCell>
+                                <TableCell>{item.name}</TableCell>
+                                <TableCell>{item.title}</TableCell>
+                                <TableCell>{item.department}</TableCell>
+                                <TableCell>{item.role}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                      <DialogFooter>
+                        <Button
+                          onClick={() => importEmployeesMutation.mutate(importData)}
+                          disabled={importEmployeesMutation.isPending}
+                        >
+                          {importEmployeesMutation.isPending ? "Đang import..." : "Import"}
+                        </Button>
+                      </DialogFooter>
+                    </>
+                  )}
+                </div>
               </DialogContent>
             </Dialog>
           )}
