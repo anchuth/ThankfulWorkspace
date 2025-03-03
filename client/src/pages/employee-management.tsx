@@ -187,7 +187,26 @@ export default function EmployeeManagementPage() {
       setDefaultPassword("");
       toast({
         title: "Import thành công",
-        description: `Đã thêm ${data.total} nhân viên vào hệ thống`,
+        description: (
+          <div className="mt-2 space-y-2">
+            <p>✅ Đã thêm {data.total} nhân viên vào hệ thống</p>
+            {data.skipped.length > 0 && (
+              <>
+                <p>⚠️ {data.skipped.length} nhân viên bị bỏ qua do trùng lặp:</p>
+                <ul className="list-disc pl-4">
+                  {data.skipped.slice(0, 3).map((item: any) => (
+                    <li key={item.row}>
+                      Dòng {item.row} ({item.username}): {item.reason}
+                    </li>
+                  ))}
+                  {data.skipped.length > 3 && (
+                    <li>...và {data.skipped.length - 3} trường hợp khác</li>
+                  )}
+                </ul>
+              </>
+            )}
+          </div>
+        ),
       });
     },
     onError: (error) => {

@@ -213,7 +213,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(400).send("Invalid data format");
     }
 
-    if (!defaultPassword) {
+    if (!defaultPassword.trim()) {
       return res.status(400).send("Default password is required");
     }
 
@@ -249,10 +249,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Process in batches
+      // Check for duplicates
+      const existingUsers = await storage.getAllUsers();
+      const existingUsernames = new Set(existingUsers.map(u => u.username));
+      const existingEmails = new Set(existingUsers.map(u => u.email));
+
+      const duplicates = [];
+      const validUsers = [];
+
+      for (const [index, user] of transformedUsers.entries()) {
+        if (existingUsernames.has(user.username) || existingEmails.has(user.email)) {
+          duplicates.push({
+            row: index + 1,
+            username: user.username,
+            email: user.email,
+            reason: existingUsernames.has(user.username) ? "Username đã tồn tại" : "Email đã tồn tại"
+          });
+        } else {
+          validUsers.push(user);
+          // Add to sets to check for duplicates in remaining rows
+          existingUsernames.add(user.username);
+          existingEmails.add(user.email);
+        }
+      }
+
+      // Process valid users in batches
       const results = [];
-      for (let i = 0; i < transformedUsers.length; i += BATCH_SIZE) {
-        const batch = transformedUsers.slice(i, i + BATCH_SIZE);
+      for (let i = 0; i < validUsers.length; i += BATCH_SIZE) {
+        const batch = validUsers.slice(i, i + BATCH_SIZE);
         const createdUsers = await storage.createManyUsers(batch);
         results.push(...createdUsers);
       }
@@ -260,6 +284,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         success: true,
         total: results.length,
+        skipped: duplicates,
         users: results
       });
     } catch (error) {
