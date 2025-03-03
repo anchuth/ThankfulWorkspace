@@ -34,7 +34,6 @@ export interface IStorage {
   createManyUsers(users: InsertUser[]): Promise<User[]>;
   getUserByEmail(email: string): Promise<User | undefined>;
   updateManyUsers(userIds: number[], info: { title?: string; department?: string; managerId?: number | null }): Promise<User[]>;
-  deleteManyUsers(userIds: number[]): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -243,13 +242,11 @@ export class DatabaseStorage implements IStorage {
   async deleteUser(userId: number): Promise<void> {
     try {
       await db.transaction(async (tx) => {
-        // First update users who have this user as their manager to have no manager
         await tx
           .update(users)
           .set({ managerId: null })
           .where(eq(users.managerId, userId));
 
-        // Delete all thanks related to this user
         await tx
           .delete(thanks)
           .where(
@@ -260,7 +257,6 @@ export class DatabaseStorage implements IStorage {
             )
           );
 
-        // Then delete the user
         await tx
           .delete(users)
           .where(eq(users.id, userId));
@@ -317,53 +313,6 @@ export class DatabaseStorage implements IStorage {
       .where(inArray(users.id, userIds))
       .returning();
     return updatedUsers;
-  }
-
-  async deleteManyUsers(userIds: number[]): Promise<void> {
-    try {
-      // Validate that all IDs are numbers and get valid IDs
-      const validIds = userIds.filter(id => {
-        const numId = Number(id);
-        return !isNaN(numId) && Number.isInteger(numId) && numId > 0;
-      });
-
-      if (validIds.length === 0) {
-        console.log("No valid IDs to delete");
-        return;
-      }
-
-      console.log("Starting deletion for user IDs:", validIds);
-
-      await db.transaction(async (tx) => {
-        // First remove these users as managers from other users
-        await tx
-          .update(users)
-          .set({ managerId: null })
-          .where(inArray(users.managerId, validIds));
-
-        // Delete all thanks related to these users
-        await tx
-          .delete(thanks)
-          .where(
-            or(
-              inArray(thanks.fromId, validIds),
-              inArray(thanks.toId, validIds),
-              inArray(thanks.approvedById, validIds)
-            )
-          );
-
-        // Delete the users themselves
-        console.log("Deleting users with IDs:", validIds);
-        const result = await tx
-          .delete(users)
-          .where(inArray(users.id, validIds));
-
-        console.log("Delete operation completed");
-      });
-    } catch (error) {
-      console.error("Transaction error while deleting users:", error);
-      throw error;
-    }
   }
 }
 
