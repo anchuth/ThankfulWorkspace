@@ -73,6 +73,14 @@ const TEMPLATE_MESSAGES = [
   }
 ];
 
+// Helper function to normalize Vietnamese text for search
+function normalizeText(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
 export function SendThanks() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -106,11 +114,16 @@ export function SendThanks() {
   // Filter users based on search term
   const filteredUsers = users?.filter((u) => {
     if (!searchTerm) return true;
-    const searchLower = searchTerm.toLowerCase();
+
+    const normalizedSearch = normalizeText(searchTerm);
+    const normalizedName = normalizeText(u.name);
+    const normalizedUsername = normalizeText(u.username);
+    const normalizedDepartment = u.department ? normalizeText(u.department) : '';
+
     return (
-      u.name.toLowerCase().includes(searchLower) ||
-      u.username.toLowerCase().includes(searchLower) ||
-      (u.department && u.department.toLowerCase().includes(searchLower))
+      normalizedName.includes(normalizedSearch) ||
+      normalizedUsername.includes(normalizedSearch) ||
+      normalizedDepartment.includes(normalizedSearch)
     );
   });
 
@@ -157,6 +170,7 @@ export function SendThanks() {
                       <Command>
                         <CommandInput
                           placeholder="Tìm kiếm theo tên, mã nhân viên hoặc bộ phận..."
+                          value={searchTerm}
                           onValueChange={setSearchTerm}
                         />
                         <CommandEmpty>Không tìm thấy nhân viên</CommandEmpty>
