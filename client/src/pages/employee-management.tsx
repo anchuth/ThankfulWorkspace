@@ -37,7 +37,7 @@ import { Redirect } from "wouter";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useForm } from "react-hook-form";
-import { Search, Plus, Download, Upload } from "lucide-react";
+import { Search, Plus, Download, Upload, Trash2, Settings } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as XLSX from 'xlsx';
 import { z } from "zod";
@@ -944,7 +944,7 @@ function EmployeeManagementPage() {
             onClick={() => setCurrentPage(1)}
             disabled={currentPage === 1}
           >
-            Đầu`
+            Đầu
           </Button>
           <Button
             variant="outline"
