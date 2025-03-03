@@ -34,9 +34,16 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { insertThanksSchema, User } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const TEMPLATE_MESSAGES = [
   {
@@ -73,16 +80,7 @@ const TEMPLATE_MESSAGES = [
   }
 ];
 
-// Helper function to normalize Vietnamese text for search
-function normalizeString(str: string): string {
-  if (!str) return '';
-  const normalized = str
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[đĐ]/g, 'd');
-  return normalized;
-}
+type SearchField = 'all' | 'name' | 'code' | 'department';
 
 export function SendThanks() {
   const { user } = useAuth();
@@ -90,6 +88,7 @@ export function SendThanks() {
   const { data: users } = useQuery<User[]>({ queryKey: ["/api/users"] });
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [searchField, setSearchField] = useState<SearchField>('all');
 
   const form = useForm({
     resolver: zodResolver(insertThanksSchema),
@@ -114,23 +113,27 @@ export function SendThanks() {
     },
   });
 
-  // Filter users based on search term
+  // Filter users based on search term and selected field
   const filteredUsers = users?.filter((u) => {
     if (!searchTerm.trim()) return true;
 
-    // Split search term into words
-    const searchWords = searchTerm.trim().split(/\s+/);
+    const term = searchTerm.toLowerCase().trim();
 
-    // For each word in the search term, check if it matches any field
-    return searchWords.every(word => {
-      const searchNormalized = normalizeString(word);
-      const nameMatch = normalizeString(u.name).includes(searchNormalized);
-      const usernameMatch = normalizeString(u.username).includes(searchNormalized);
-      const departmentMatch = u.department ? 
-        normalizeString(u.department).includes(searchNormalized) : false;
-
-      return nameMatch || usernameMatch || departmentMatch;
-    });
+    switch (searchField) {
+      case 'name':
+        return u.name.toLowerCase().includes(term);
+      case 'code':
+        return u.username.toLowerCase().includes(term);
+      case 'department':
+        return u.department?.toLowerCase().includes(term);
+      case 'all':
+      default:
+        return (
+          u.name.toLowerCase().includes(term) ||
+          u.username.toLowerCase().includes(term) ||
+          u.department?.toLowerCase().includes(term)
+        );
+    }
   });
 
   return (
@@ -174,11 +177,32 @@ export function SendThanks() {
                     </PopoverTrigger>
                     <PopoverContent className="w-full p-0">
                       <Command>
-                        <CommandInput
-                          placeholder="Tìm kiếm theo tên, mã nhân viên hoặc bộ phận..."
-                          value={searchTerm}
-                          onValueChange={setSearchTerm}
-                        />
+                        <div className="flex items-center gap-2 p-2 border-b">
+                          <Search className="w-4 h-4 text-muted-foreground" />
+                          <CommandInput
+                            placeholder="Tìm kiếm..."
+                            value={searchTerm}
+                            onValueChange={setSearchTerm}
+                          />
+                          <Select 
+                            value={searchField}
+                            onValueChange={(value: SearchField) => setSearchField(value)}
+                          >
+                            <SelectTrigger className="w-[120px]">
+                              <SelectValue>
+                                {searchField === 'all' ? 'Tất cả' :
+                                 searchField === 'name' ? 'Tên' :
+                                 searchField === 'code' ? 'Mã số' : 'Bộ phận'}
+                              </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">Tất cả</SelectItem>
+                              <SelectItem value="name">Tên</SelectItem>
+                              <SelectItem value="code">Mã số</SelectItem>
+                              <SelectItem value="department">Bộ phận</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
                         <CommandEmpty>Không tìm thấy nhân viên</CommandEmpty>
                         <CommandGroup className="max-h-[300px] overflow-y-auto">
                           {filteredUsers
@@ -248,8 +272,8 @@ export function SendThanks() {
                         {...field}
                       />
                     </FormControl>
+                    <FormMessage />
                   </div>
-                  <FormMessage />
                 </FormItem>
               )}
             />
