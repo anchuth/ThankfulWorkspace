@@ -36,6 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -45,6 +46,7 @@ export default function ThanksManagementPage() {
   const [selectedThanks, setSelectedThanks] = useState<Thanks | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [activeTab, setActiveTab] = useState<"all" | "history">("all");
 
   // Redirect if not admin
   if (user?.role !== "admin") {
@@ -111,11 +113,24 @@ export default function ThanksManagementPage() {
     );
   });
 
-  const totalPages = Math.ceil((filteredThanks?.length || 0) / ITEMS_PER_PAGE);
-  const paginatedThanks = filteredThanks?.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
+  // Filter for history tab (approved/rejected)
+  const historyThanks = filteredThanks?.filter(
+    (thanks) => thanks.status === "approved" || thanks.status === "rejected"
   );
+
+  const getDisplayThanks = () => {
+    const thanksToDisplay = activeTab === "history" ? historyThanks : filteredThanks;
+    const totalPages = Math.ceil((thanksToDisplay?.length || 0) / ITEMS_PER_PAGE);
+    return {
+      thanks: thanksToDisplay?.slice(
+        (currentPage - 1) * ITEMS_PER_PAGE,
+        currentPage * ITEMS_PER_PAGE
+      ),
+      totalPages,
+    };
+  };
+
+  const { thanks: displayThanks, totalPages } = getDisplayThanks();
 
   return (
     <Layout>
@@ -127,107 +142,192 @@ export default function ThanksManagementPage() {
           </p>
         </div>
 
-        {/* Thanh công cụ */}
-        <div className="flex items-center gap-4">
-          <div className="flex-1 flex items-center gap-2">
-            <Search className="w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Tìm kiếm theo tên hoặc nội dung..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-xs"
-            />
-          </div>
-        </div>
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "all" | "history")}>
+          <TabsList>
+            <TabsTrigger value="all">Tất cả lời cảm ơn</TabsTrigger>
+            <TabsTrigger value="history">Lịch sử duyệt</TabsTrigger>
+          </TabsList>
+          <TabsContent value="all" className="space-y-4">
+            {/* Thanh công cụ */}
+            <div className="flex items-center gap-4">
+              <div className="flex-1 flex items-center gap-2">
+                <Search className="w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Tìm kiếm theo tên hoặc nội dung..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="max-w-xs"
+                />
+              </div>
+            </div>
 
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Người gửi</TableHead>
-                <TableHead>Người nhận</TableHead>
-                <TableHead>Nội dung</TableHead>
-                <TableHead>Điểm</TableHead>
-                <TableHead>Trạng thái</TableHead>
-                <TableHead>Thời gian</TableHead>
-                <TableHead>Thao tác</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {paginatedThanks?.map((thanks) => {
-                const fromUser = users?.find((u) => u.id === thanks.fromId);
-                const toUser = users?.find((u) => u.id === thanks.toId);
-
-                return (
-                  <TableRow key={thanks.id}>
-                    <TableCell>
-                      {fromUser?.name || "N/A"}
-                      <br />
-                      <span className="text-sm text-muted-foreground">
-                        {fromUser?.username}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      {toUser?.name || "N/A"}
-                      <br />
-                      <span className="text-sm text-muted-foreground">
-                        {toUser?.username}
-                      </span>
-                    </TableCell>
-                    <TableCell className="max-w-md">
-                      <div className="line-clamp-2">{thanks.message}</div>
-                    </TableCell>
-                    <TableCell>{thanks.points}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          thanks.status === "approved"
-                            ? "default"
-                            : thanks.status === "rejected"
-                            ? "destructive"
-                            : "secondary"
-                        }
-                      >
-                        {thanks.status === "pending"
-                          ? "Chờ duyệt"
-                          : thanks.status === "approved"
-                          ? "Đã duyệt"
-                          : "Từ chối"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {formatDistance(new Date(thanks.createdAt), new Date(), {
-                        addSuffix: true,
-                      })}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setSelectedThanks(thanks)}
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => {
-                            if (confirm("Bạn có chắc chắn muốn xóa lời cảm ơn này?")) {
-                              deleteThanksMutation.mutate(thanks.id);
-                            }
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Người gửi</TableHead>
+                    <TableHead>Người nhận</TableHead>
+                    <TableHead>Nội dung</TableHead>
+                    <TableHead>Điểm</TableHead>
+                    <TableHead>Trạng thái</TableHead>
+                    <TableHead>Thời gian</TableHead>
+                    <TableHead>Thao tác</TableHead>
                   </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </div>
+                </TableHeader>
+                <TableBody>
+                  {displayThanks?.map((thanks) => {
+                    const fromUser = users?.find((u) => u.id === thanks.fromId);
+                    const toUser = users?.find((u) => u.id === thanks.toId);
+
+                    return (
+                      <TableRow key={thanks.id}>
+                        <TableCell>
+                          {fromUser?.name || "N/A"}
+                          <br />
+                          <span className="text-sm text-muted-foreground">
+                            {fromUser?.username}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          {toUser?.name || "N/A"}
+                          <br />
+                          <span className="text-sm text-muted-foreground">
+                            {toUser?.username}
+                          </span>
+                        </TableCell>
+                        <TableCell className="max-w-md">
+                          <div className="line-clamp-2">{thanks.message}</div>
+                        </TableCell>
+                        <TableCell>{thanks.points}</TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              thanks.status === "approved"
+                                ? "default"
+                                : thanks.status === "rejected"
+                                ? "destructive"
+                                : "secondary"
+                            }
+                          >
+                            {thanks.status === "pending"
+                              ? "Chờ duyệt"
+                              : thanks.status === "approved"
+                              ? "Đã duyệt"
+                              : "Từ chối"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {formatDistance(new Date(thanks.createdAt), new Date(), {
+                            addSuffix: true,
+                          })}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setSelectedThanks(thanks)}
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => {
+                                if (confirm("Bạn có chắc chắn muốn xóa lời cảm ơn này?")) {
+                                  deleteThanksMutation.mutate(thanks.id);
+                                }
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="history" className="space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="flex-1 flex items-center gap-2">
+                <Search className="w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Tìm kiếm theo tên hoặc nội dung..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="max-w-xs"
+                />
+              </div>
+            </div>
+
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Người gửi</TableHead>
+                    <TableHead>Người nhận</TableHead>
+                    <TableHead>Nội dung</TableHead>
+                    <TableHead>Trạng thái</TableHead>
+                    <TableHead>Người duyệt</TableHead>
+                    <TableHead>Thời gian duyệt</TableHead>
+                    <TableHead>Lý do từ chối</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {displayThanks?.map((thanks) => {
+                    const fromUser = users?.find((u) => u.id === thanks.fromId);
+                    const toUser = users?.find((u) => u.id === thanks.toId);
+                    const approvedByUser = users?.find((u) => u.id === thanks.approvedById);
+
+                    return (
+                      <TableRow key={thanks.id}>
+                        <TableCell>
+                          {fromUser?.name || "N/A"}
+                          <br />
+                          <span className="text-sm text-muted-foreground">
+                            {fromUser?.username}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          {toUser?.name || "N/A"}
+                          <br />
+                          <span className="text-sm text-muted-foreground">
+                            {toUser?.username}
+                          </span>
+                        </TableCell>
+                        <TableCell className="max-w-md">
+                          <div className="line-clamp-2">{thanks.message}</div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={thanks.status === "approved" ? "default" : "destructive"}
+                          >
+                            {thanks.status === "approved" ? "Đã duyệt" : "Từ chối"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{approvedByUser?.name || "N/A"}</TableCell>
+                        <TableCell>
+                          {thanks.approvedAt
+                            ? formatDistance(new Date(thanks.approvedAt), new Date(), {
+                                addSuffix: true,
+                              })
+                            : "N/A"}
+                        </TableCell>
+                        <TableCell>
+                          {thanks.rejectReason || "N/A"}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          </TabsContent>
+        </Tabs>
 
         {/* Dialog chỉnh sửa lời cảm ơn */}
         <Dialog open={!!selectedThanks} onOpenChange={(open) => !open && setSelectedThanks(null)}>
@@ -306,8 +406,8 @@ export default function ThanksManagementPage() {
                       prev ? { 
                         ...prev, 
                         status: value,
-                        approvedById: value === "approved" ? user?.id : undefined,
-                        rejectReason: value === "rejected" ? prev.rejectReason : undefined
+                        approvedById: value === "approved" ? user?.id : null,
+                        rejectReason: value === "rejected" ? prev.rejectReason : null
                       } : null
                     )
                   }
@@ -348,8 +448,8 @@ export default function ThanksManagementPage() {
                     fromId: selectedThanks.fromId,
                     toId: selectedThanks.toId,
                     status: selectedThanks.status,
-                    ...(selectedThanks.status === "approved" && { approvedById: user?.id }),
-                    ...(selectedThanks.status === "rejected" && { rejectReason: selectedThanks.rejectReason }),
+                    approvedById: selectedThanks.approvedById || undefined,
+                    rejectReason: selectedThanks.rejectReason || undefined,
                   });
                 }}
                 disabled={updateThanksMutation.isPending}
