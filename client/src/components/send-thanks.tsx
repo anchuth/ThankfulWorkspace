@@ -15,13 +15,17 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Input } from "@/components/ui/input"; // Added Input import
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -30,8 +34,9 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { insertThanksSchema, User } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Search } from "lucide-react"; // Added Search icon import
-import { useState } from "react"; // Added useState import
+import { Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useState } from "react";
 
 const TEMPLATE_MESSAGES = [
   {
@@ -72,7 +77,8 @@ export function SendThanks() {
   const { user } = useAuth();
   const { toast } = useToast();
   const { data: users } = useQuery<User[]>({ queryKey: ["/api/users"] });
-  const [searchTerm, setSearchTerm] = useState(""); // Added search state
+  const [open, setOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const form = useForm({
     resolver: zodResolver(insertThanksSchema),
@@ -126,49 +132,70 @@ export function SendThanks() {
               control={form.control}
               name="toId"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="flex flex-col">
                   <FormLabel>Người nhận</FormLabel>
-                  <Select
-                    onValueChange={(val) => field.onChange(parseInt(val))}
-                    value={field.value?.toString()}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Chọn đồng nghiệp" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <div className="flex items-center gap-2 px-3 pb-2">
-                        <Search className="w-4 h-4 text-muted-foreground" />
-                        <Input
+                  <Popover open={open} onOpenChange={setOpen}>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={open}
+                          className={cn(
+                            "w-full justify-between",
+                            !field.value && "text-muted-foreground"
+                          )}
+                        >
+                          {field.value
+                            ? users?.find((user) => user.id === field.value)?.name
+                            : "Chọn đồng nghiệp"}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full p-0">
+                      <Command>
+                        <CommandInput
                           placeholder="Tìm kiếm theo tên, mã nhân viên hoặc bộ phận..."
-                          value={searchTerm}
-                          onChange={(e) => setSearchTerm(e.target.value)}
-                          className="h-8"
+                          onValueChange={setSearchTerm}
                         />
-                      </div>
-                      <div className="max-h-[300px] overflow-y-auto">
-                        {filteredUsers
-                          ?.filter((u) => u.id !== user!.id)
-                          .map((u) => (
-                            <SelectItem
-                              key={u.id}
-                              value={u.id.toString()}
-                              className="flex flex-col items-start py-2"
-                            >
-                              <div className="font-medium">
-                                {u.name} ({u.username})
-                              </div>
-                              {u.department && (
-                                <div className="text-xs text-muted-foreground">
-                                  {u.department}
+                        <CommandEmpty>Không tìm thấy nhân viên</CommandEmpty>
+                        <CommandGroup className="max-h-[300px] overflow-y-auto">
+                          {filteredUsers
+                            ?.filter((u) => u.id !== user!.id)
+                            .map((u) => (
+                              <CommandItem
+                                key={u.id}
+                                value={u.id.toString()}
+                                onSelect={() => {
+                                  form.setValue("toId", u.id);
+                                  setOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    field.value === u.id
+                                      ? "opacity-100"
+                                      : "opacity-0"
+                                  )}
+                                />
+                                <div className="flex flex-col">
+                                  <div className="font-medium">
+                                    {u.name} ({u.username})
+                                  </div>
+                                  {u.department && (
+                                    <div className="text-xs text-muted-foreground">
+                                      {u.department}
+                                    </div>
+                                  )}
                                 </div>
-                              )}
-                            </SelectItem>
-                          ))}
-                      </div>
-                    </SelectContent>
-                  </Select>
+                              </CommandItem>
+                            ))}
+                        </CommandGroup>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                   <FormMessage />
                 </FormItem>
               )}
@@ -181,22 +208,6 @@ export function SendThanks() {
                 <FormItem>
                   <FormLabel>Lời nhắn</FormLabel>
                   <div className="space-y-2">
-                    <Select
-                      onValueChange={(message) => form.setValue("message", message)}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Chọn lời cảm ơn mẫu" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {TEMPLATE_MESSAGES.map((template, index) => (
-                          <SelectItem key={index} value={template.message}>
-                            {template.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
                     <FormControl>
                       <Textarea
                         placeholder="Viết lời cảm ơn của bạn..."
