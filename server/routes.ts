@@ -339,6 +339,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           (typeof managerId === 'number' ? managerId : parseInt(managerId));
       }
 
+      // Validate managerId if set
+      if (updateData.managerId !== undefined && updateData.managerId !== null) {
+        const managerExists = users.some(u => u.id === updateData.managerId);
+        if (!managerExists) {
+          return res.status(400).send("Invalid manager ID");
+        }
+      }
+
       // Update users
       const updatedUsers = await storage.updateManyUsers(validIds, updateData);
 
