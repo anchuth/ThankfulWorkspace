@@ -88,12 +88,25 @@ export function setupAuth(app: Express) {
         return res.status(400).send("Employee ID already exists");
       }
 
-      // Set initial role as employee
+      console.log("Registering new user:", {
+        username: req.body.username,
+        name: req.body.name,
+        role: req.body.role || "employee"
+      });
+
+      // Hash password and create user
       const hashedPassword = await hashPassword(req.body.password);
       const user = await storage.createUser({
         ...req.body,
         password: hashedPassword,
-        role: "employee", // Explicitly set role
+        role: req.body.role || "employee", // Allow role to be set during registration
+      });
+
+      console.log("User created successfully:", {
+        id: user.id,
+        username: user.username,
+        name: user.name,
+        role: user.role
       });
 
       req.login(user, (err) => {
@@ -101,6 +114,7 @@ export function setupAuth(app: Express) {
         res.status(201).json(user);
       });
     } catch (err) {
+      console.error("Registration error:", err);
       next(err);
     }
   });
