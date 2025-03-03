@@ -65,7 +65,7 @@ export default function EmployeeManagementPage() {
     defaultValues: {
       title: "",
       department: "",
-      managerId: "",
+      managerId: "unchanged", // Set default value to "unchanged"
     },
   });
 

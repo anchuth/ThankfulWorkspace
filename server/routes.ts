@@ -322,12 +322,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).send("Cannot update admin users");
       }
 
+      // Prepare update data with only defined fields
+      const updateData: { title?: string; department?: string; managerId?: number | null } = {};
+
+      if (typeof title === 'string' && title.trim()) {
+        updateData.title = title.trim();
+      }
+
+      if (typeof department === 'string' && department.trim()) {
+        updateData.department = department.trim();
+      }
+
+      // Only update managerId if it's explicitly set
+      if (managerId !== undefined && managerId !== "unchanged") {
+        updateData.managerId = managerId === "none" ? null : 
+          (typeof managerId === 'number' ? managerId : parseInt(managerId));
+      }
+
       // Update users
-      const updatedUsers = await storage.updateManyUsers(validIds, {
-        title,
-        department,
-        managerId,
-      });
+      const updatedUsers = await storage.updateManyUsers(validIds, updateData);
 
       res.json(updatedUsers);
     } catch (error) {
