@@ -29,7 +29,7 @@ export interface IStorage {
   updateUserRole(userId: number, role: string): Promise<User>;
   updateUserInfo(userId: number, info: { title?: string; department?: string }): Promise<User>;
   deleteUser(userId: number): Promise<void>;
-  updateThanksContent(id: number, data: { message?: string; points?: number }): Promise<Thanks>;
+  updateThanksContent(id: number, data: { message?: string; fromId?: number; toId?: number; status?: "pending" | "approved" | "rejected"; approvedById?: number | null; approvedAt?: Date | null; rejectReason?: string | null; }): Promise<Thanks>;
   deleteThanks(id: number): Promise<void>;
 }
 
@@ -236,7 +236,15 @@ export class DatabaseStorage implements IStorage {
       .delete(users)
       .where(eq(users.id, userId));
   }
-  async updateThanksContent(id: number, data: { message?: string; points?: number }): Promise<Thanks> {
+  async updateThanksContent(id: number, data: { 
+    message?: string; 
+    fromId?: number;
+    toId?: number;
+    status?: "pending" | "approved" | "rejected";
+    approvedById?: number | null;
+    approvedAt?: Date | null;
+    rejectReason?: string | null;
+  }): Promise<Thanks> {
     const [updated] = await db
       .update(thanks)
       .set(data)

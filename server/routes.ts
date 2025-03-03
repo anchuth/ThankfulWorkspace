@@ -22,9 +22,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (req.user!.role !== "admin") return res.sendStatus(403);
 
     const id = parseInt(req.params.id);
-    const { message, points } = req.body;
+    const { message, fromId, toId, status, approvedById, rejectReason } = req.body;
 
-    const thanks = await storage.updateThanksContent(id, { message, points });
+    const thanks = await storage.updateThanksContent(id, { 
+      message, 
+      fromId, 
+      toId, 
+      status,
+      approvedById: status === "approved" ? approvedById : null,
+      approvedAt: status === "approved" ? new Date() : null,
+      rejectReason: status === "rejected" ? rejectReason : null,
+    });
     res.json(thanks);
   });
 

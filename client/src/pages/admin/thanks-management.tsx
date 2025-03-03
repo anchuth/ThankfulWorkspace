@@ -29,6 +29,7 @@ import { Label } from "@/components/ui/label";
 import { Search, Edit2, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Redirect } from "wouter";
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from '@radix-ui/react-select'
 
 const ITEMS_PER_PAGE = 10;
 
@@ -54,11 +55,16 @@ export default function ThanksManagementPage() {
 
   // Mutation để cập nhật lời cảm ơn
   const updateThanksMutation = useMutation({
-    mutationFn: async (data: { id: number; message: string; points: number }) => {
-      const res = await apiRequest("PATCH", `/api/admin/thanks/${data.id}`, {
-        message: data.message,
-        points: data.points,
-      });
+    mutationFn: async (data: { 
+      id: number; 
+      message: string;
+      fromId: number;
+      toId: number;
+      status: "pending" | "approved" | "rejected";
+      approvedById?: number;
+      rejectReason?: string;
+    }) => {
+      const res = await apiRequest("PATCH", `/api/admin/thanks/${data.id}`, data);
       return res.json();
     },
     onSuccess: () => {
@@ -223,10 +229,56 @@ export default function ThanksManagementPage() {
             <DialogHeader>
               <DialogTitle>Chỉnh sửa lời cảm ơn</DialogTitle>
               <DialogDescription>
-                Chỉnh sửa nội dung và điểm thưởng cho lời cảm ơn
+                Chỉnh sửa thông tin lời cảm ơn
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Người gửi</Label>
+                <Select
+                  value={selectedThanks?.fromId?.toString()}
+                  onValueChange={(value) =>
+                    setSelectedThanks((prev) =>
+                      prev ? { ...prev, fromId: parseInt(value) } : null
+                    )
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Chọn người gửi" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {users?.map((user) => (
+                      <SelectItem key={user.id} value={user.id.toString()}>
+                        {user.name} ({user.username})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Người nhận</Label>
+                <Select
+                  value={selectedThanks?.toId?.toString()}
+                  onValueChange={(value) =>
+                    setSelectedThanks((prev) =>
+                      prev ? { ...prev, toId: parseInt(value) } : null
+                    )
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Chọn người nhận" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {users?.map((user) => (
+                      <SelectItem key={user.id} value={user.id.toString()}>
+                        {user.name} ({user.username})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="space-y-2">
                 <Label>Nội dung</Label>
                 <Input
@@ -238,19 +290,47 @@ export default function ThanksManagementPage() {
                   }
                 />
               </div>
+
               <div className="space-y-2">
-                <Label>Điểm thưởng</Label>
-                <Input
-                  type="number"
-                  min="1"
-                  value={selectedThanks?.points || 1}
-                  onChange={(e) =>
+                <Label>Trạng thái</Label>
+                <Select
+                  value={selectedThanks?.status}
+                  onValueChange={(value: "pending" | "approved" | "rejected") =>
                     setSelectedThanks((prev) =>
-                      prev ? { ...prev, points: parseInt(e.target.value) } : null
+                      prev ? { 
+                        ...prev, 
+                        status: value,
+                        approvedById: value === "approved" ? user?.id : undefined,
+                        rejectReason: value === "rejected" ? prev.rejectReason : undefined
+                      } : null
                     )
                   }
-                />
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Chọn trạng thái" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">Chờ duyệt</SelectItem>
+                    <SelectItem value="approved">Đã duyệt</SelectItem>
+                    <SelectItem value="rejected">Từ chối</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
+
+              {selectedThanks?.status === "rejected" && (
+                <div className="space-y-2">
+                  <Label>Lý do từ chối</Label>
+                  <Input
+                    value={selectedThanks?.rejectReason || ""}
+                    onChange={(e) =>
+                      setSelectedThanks((prev) =>
+                        prev ? { ...prev, rejectReason: e.target.value } : null
+                      )
+                    }
+                    placeholder="Nhập lý do từ chối"
+                  />
+                </div>
+              )}
             </div>
             <DialogFooter>
               <Button
@@ -259,7 +339,11 @@ export default function ThanksManagementPage() {
                   updateThanksMutation.mutate({
                     id: selectedThanks.id,
                     message: selectedThanks.message,
-                    points: selectedThanks.points,
+                    fromId: selectedThanks.fromId,
+                    toId: selectedThanks.toId,
+                    status: selectedThanks.status,
+                    ...(selectedThanks.status === "approved" && { approvedById: user?.id }),
+                    ...(selectedThanks.status === "rejected" && { rejectReason: selectedThanks.rejectReason }),
                   });
                 }}
                 disabled={updateThanksMutation.isPending}
