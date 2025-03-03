@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { formatDistance } from "date-fns";
 import { Button } from "@/components/ui/button";
-import { LogIn, MessageSquare, Trophy } from "lucide-react";
+import { LogIn, MessageSquare, Trophy, Award, Users, ChartBar } from "lucide-react";
 import { Link } from "wouter";
 
 function formatUserName(user?: User) {
@@ -38,133 +38,162 @@ export default function HomePage() {
 
   return (
     <Layout>
-      <div className="space-y-8">
+      <div className="space-y-12">
         {/* Hero section - visible to all */}
-        <section className="text-center py-12">
-          <h1 className="text-4xl font-bold mb-4">Recognition Portal</h1>
-          <p className="text-xl text-muted-foreground mb-8">
-            Celebrate achievements and build a culture of appreciation
-          </p>
-          {!user ? (
-            <Link href="/auth">
-              <Button size="lg" className="gap-2">
-                <LogIn className="w-4 h-4" />
-                Đăng nhập để bắt đầu
-              </Button>
-            </Link>
-          ) : (
-            <Link href="/thanks">
-              <Button size="lg" className="gap-2">
-                <MessageSquare className="w-4 h-4" />
-                Gửi lời cảm ơn
-              </Button>
-            </Link>
-          )}
+        <section className="relative py-20 overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-primary/5 -z-10" />
+          <div className="container mx-auto text-center relative">
+            <div className="flex justify-center mb-6">
+              <Award className="h-16 w-16 text-primary" />
+            </div>
+            <h1 className="text-5xl font-bold mb-6 bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+              Recognition Portal
+            </h1>
+            <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
+              Xây dựng văn hóa công ty thông qua việc ghi nhận và đánh giá đóng góp của mọi người
+            </p>
+            {!user ? (
+              <Link href="/auth">
+                <Button size="lg" className="gap-2">
+                  <LogIn className="w-4 h-4" />
+                  Đăng nhập để bắt đầu
+                </Button>
+              </Link>
+            ) : (
+              <Link href="/thanks">
+                <Button size="lg" className="gap-2">
+                  <MessageSquare className="w-4 h-4" />
+                  Gửi lời cảm ơn
+                </Button>
+              </Link>
+            )}
+          </div>
         </section>
 
         {user && (
-          <div className="grid gap-8 md:grid-cols-2">
-            {/* Recent Thanks */}
-            <section>
-              <Card>
-                <CardHeader>
-                  <CardTitle>Lời cảm ơn gần đây</CardTitle>
-                  <CardDescription>
-                    5 lời cảm ơn mới nhất trong hệ thống
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {recentThanks?.slice(0, 5).map((thanks) => {
-                      const fromUser = users?.find(u => u.id === thanks.fromId);
-                      const toUser = users?.find(u => u.id === thanks.toId);
-                      return (
-                        <div key={thanks.id} className="border-b pb-4 last:border-0">
-                          <div className="flex items-center justify-between mb-2">
-                            <p className="text-sm font-medium">
-                              {formatUserName(fromUser)} → {formatUserName(toUser)}
+          <div className="container mx-auto">
+            <div className="grid gap-8 md:grid-cols-2">
+              {/* Recent Thanks */}
+              <section>
+                <Card className="h-full">
+                  <CardHeader>
+                    <div className="flex items-center gap-2">
+                      <MessageSquare className="w-5 h-5 text-primary" />
+                      <div>
+                        <CardTitle>Lời cảm ơn gần đây</CardTitle>
+                        <CardDescription>
+                          5 lời cảm ơn mới nhất trong hệ thống
+                        </CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {recentThanks?.slice(0, 5).map((thanks) => {
+                        const fromUser = users?.find(u => u.id === thanks.fromId);
+                        const toUser = users?.find(u => u.id === thanks.toId);
+                        return (
+                          <div key={thanks.id} className="border-b pb-4 last:border-0">
+                            <div className="flex items-center justify-between mb-2">
+                              <p className="text-sm font-medium">
+                                {formatUserName(fromUser)} → {formatUserName(toUser)}
+                              </p>
+                              <Badge variant="secondary" className="text-xs">
+                                {formatDistance(new Date(thanks.createdAt), new Date(), {
+                                  addSuffix: true,
+                                })}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              {truncateMessage(thanks.message)}
                             </p>
-                            <span className="text-xs text-muted-foreground">
-                              {formatDistance(new Date(thanks.createdAt), new Date(), {
-                                addSuffix: true,
-                              })}
-                            </span>
                           </div>
-                          <p className="text-sm text-muted-foreground">
-                            {truncateMessage(thanks.message)}
+                        );
+                      })}
+                      {(!recentThanks || recentThanks.length === 0) && (
+                        <div className="text-center py-8">
+                          <MessageSquare className="w-12 h-12 text-muted-foreground/20 mx-auto mb-4" />
+                          <p className="text-muted-foreground">
+                            Chưa có lời cảm ơn nào
                           </p>
                         </div>
-                      );
-                    })}
-                    {(!recentThanks || recentThanks.length === 0) && (
-                      <p className="text-center text-muted-foreground py-4">
-                        Chưa có lời cảm ơn nào
-                      </p>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </section>
-
-            {/* Top Rankings */}
-            <section>
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center gap-2">
-                    <Trophy className="w-5 h-5 text-yellow-500" />
-                    <div>
-                      <CardTitle>Bảng xếp hạng tháng</CardTitle>
-                      <CardDescription>
-                        Top 5 người nhận được nhiều lời cảm ơn nhất
-                      </CardDescription>
+                      )}
                     </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {rankings?.slice(0, 5).map((ranking, index) => {
-                      const user = users?.find(u => u.id === ranking.userId);
-                      return (
-                        <div key={ranking.userId} className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <span className="text-lg font-bold text-muted-foreground">
-                              #{index + 1}
-                            </span>
-                            <span className="font-medium">{user?.name}</span>
+                  </CardContent>
+                </Card>
+              </section>
+
+              {/* Top Rankings */}
+              <section>
+                <Card className="h-full">
+                  <CardHeader>
+                    <div className="flex items-center gap-2">
+                      <Trophy className="w-5 h-5 text-yellow-500" />
+                      <div>
+                        <CardTitle>Bảng xếp hạng tháng</CardTitle>
+                        <CardDescription>
+                          Top 5 người nhận được nhiều lời cảm ơn nhất
+                        </CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {rankings?.slice(0, 5).map((ranking, index) => {
+                        const user = users?.find(u => u.id === ranking.userId);
+                        return (
+                          <div key={ranking.userId} className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
+                            <div className="flex items-center gap-4">
+                              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-bold">
+                                #{index + 1}
+                              </span>
+                              <div>
+                                <p className="font-medium">{user?.name}</p>
+                                <p className="text-sm text-muted-foreground">{user?.title}</p>
+                              </div>
+                            </div>
+                            <Badge variant="secondary" className="font-mono">
+                              {ranking.points} pts
+                            </Badge>
                           </div>
-                          <Badge variant="secondary" className="font-mono">
-                            {ranking.points} pts
-                          </Badge>
+                        );
+                      })}
+                      {(!rankings || rankings.length === 0) && (
+                        <div className="text-center py-8">
+                          <Trophy className="w-12 h-12 text-muted-foreground/20 mx-auto mb-4" />
+                          <p className="text-muted-foreground">
+                            Chưa có dữ liệu xếp hạng
+                          </p>
                         </div>
-                      );
-                    })}
-                    {(!rankings || rankings.length === 0) && (
-                      <p className="text-center text-muted-foreground py-4">
-                        Chưa có dữ liệu xếp hạng
-                      </p>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </section>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </section>
+            </div>
           </div>
         )}
 
         {/* Feature cards for non-logged in users */}
         {!user && (
-          <div className="grid md:grid-cols-3 gap-6">
-            <FeatureCard
-              title="Gửi lời cảm ơn"
-              description="Gửi lời cảm ơn đến đồng nghiệp để ghi nhận những đóng góp của họ"
-            />
-            <FeatureCard
-              title="Bảng xếp hạng"
-              description="Theo dõi và vinh danh những người nhận được nhiều lời cảm ơn nhất"
-            />
-            <FeatureCard
-              title="Quản lý hiệu quả"
-              description="Quản lý và theo dõi hoạt động của nhân viên một cách minh bạch"
-            />
+          <div className="container mx-auto">
+            <div className="grid md:grid-cols-3 gap-8">
+              <FeatureCard
+                icon={MessageSquare}
+                title="Gửi lời cảm ơn"
+                description="Gửi lời cảm ơn đến đồng nghiệp để ghi nhận những đóng góp của họ"
+              />
+              <FeatureCard
+                icon={ChartBar}
+                title="Bảng xếp hạng"
+                description="Theo dõi và vinh danh những người nhận được nhiều lời cảm ơn nhất"
+              />
+              <FeatureCard
+                icon={Users}
+                title="Quản lý hiệu quả"
+                description="Quản lý và theo dõi hoạt động của nhân viên một cách minh bạch"
+              />
+            </div>
           </div>
         )}
       </div>
@@ -172,9 +201,20 @@ export default function HomePage() {
   );
 }
 
-function FeatureCard({ title, description }: { title: string; description: string }) {
+function FeatureCard({ 
+  icon: Icon, 
+  title, 
+  description 
+}: { 
+  icon: React.ComponentType<{ className?: string }>;
+  title: string; 
+  description: string;
+}) {
   return (
-    <Card>
+    <Card className="relative overflow-hidden">
+      <div className="absolute top-4 right-4">
+        <Icon className="w-6 h-6 text-primary/40" />
+      </div>
       <CardHeader>
         <CardTitle>{title}</CardTitle>
         <CardDescription>{description}</CardDescription>
