@@ -44,10 +44,20 @@ app.use((req, res, next) => {
 
     // Error handling middleware
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+      // Don't send response for aborted requests
+      if (err.code === 'ECONNABORTED' || err.type === 'request.aborted') {
+        console.log('Request aborted by client');
+        return;
+      }
+
       console.error('Server error:', err);
       const status = err.status || err.statusCode || 500;
       const message = err.message || "Internal Server Error";
-      res.status(status).json({ message });
+
+      // Only attempt to send a response if the response hasn't been sent yet
+      if (!res.headersSent) {
+        res.status(status).json({ message });
+      }
     });
 
     // Setup Vite in development

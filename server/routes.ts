@@ -7,6 +7,8 @@ import { hashPassword } from './utils'; // Assuming hashPassword function exists
 
 export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
+  app.use(express.json({ limit: '50mb', timeout: 120000 })); // 2 minute timeout
+  app.use(express.urlencoded({ extended: false, limit: '50mb', timeout: 120000 }));
 
   // Get all thanks (admin only)
   app.get("/api/admin/thanks", async (req, res) => {
