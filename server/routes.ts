@@ -24,10 +24,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const id = parseInt(req.params.id);
     const { message, fromId, toId, status, approvedById, rejectReason } = req.body;
 
-    const thanks = await storage.updateThanksContent(id, { 
-      message, 
-      fromId, 
-      toId, 
+    const thanks = await storage.updateThanksContent(id, {
+      message,
+      fromId,
+      toId,
       status,
       approvedById: status === "approved" ? approvedById : null,
       approvedAt: status === "approved" ? new Date() : null,
@@ -203,7 +203,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ received, sent });
   });
 
-  // Bulk import users (admin only)
+  // Import users route - bulk import
   app.post("/api/users/bulk-import", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     if (req.user!.role !== "admin") return res.sendStatus(403);
@@ -213,41 +213,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(400).send("Invalid data format");
     }
 
-    if (!defaultPassword.trim()) {
+    if (!defaultPassword || !defaultPassword.trim()) {
       return res.status(400).send("Default password is required");
     }
 
     try {
       const BATCH_SIZE = 100; // Process 100 users at a time
+
+      // Transform imported data to match our schema
       const transformedUsers = users.map(user => ({
         username: user.username,
-        password: defaultPassword,
+        password: defaultPassword.trim(),
         name: `${user.first_name} ${user.last_name}`,
         title: user.position,
         department: user.department,
         role: "employee", // Default role
         email: user.email
       }));
-
-      // Validate all users first
-      const validationErrors = [];
-      for (const [index, user] of transformedUsers.entries()) {
-        const parsed = insertUserSchema.safeParse(user);
-        if (!parsed.success) {
-          validationErrors.push({
-            row: index + 1,
-            username: user.username,
-            errors: parsed.error.errors.map(e => e.message)
-          });
-        }
-      }
-
-      if (validationErrors.length > 0) {
-        return res.status(400).json({
-          error: "Validation failed",
-          details: validationErrors
-        });
-      }
 
       // Check for duplicates
       const existingUsers = await storage.getAllUsers();
@@ -257,7 +239,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const duplicates = [];
       const validUsers = [];
 
+      // Validate and filter users
       for (const [index, user] of transformedUsers.entries()) {
+        const parsed = insertUserSchema.safeParse(user);
+
+        if (!parsed.success) {
+          duplicates.push({
+            row: index + 1,
+            username: user.username,
+            errors: parsed.error.errors.map(e => e.message)
+          });
+          continue;
+        }
+
         if (existingUsernames.has(user.username) || existingEmails.has(user.email)) {
           duplicates.push({
             row: index + 1,

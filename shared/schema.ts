@@ -7,6 +7,7 @@ import { relations } from "drizzle-orm";
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(), // Employee ID
+  email: text("email").notNull().unique(), // Add email field
   password: text("password").notNull(),
   name: text("name").notNull(),
   title: text("title"), // Chức danh
@@ -77,11 +78,13 @@ export const insertUserSchema = createInsertSchema(users)
     managerId: true,
     title: true,
     department: true,
+    email: true,
   })
   .extend({
     managerId: z.number().optional(),
     title: z.string().optional(),
     department: z.string().optional(),
+    email: z.string().email("Email không hợp lệ"),
   });
 
 export const insertThanksSchema = createInsertSchema(thanks)
