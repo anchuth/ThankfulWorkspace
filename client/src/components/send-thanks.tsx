@@ -73,12 +73,40 @@ const TEMPLATE_MESSAGES = [
   }
 ];
 
-// Helper function to remove diacritics from Vietnamese text
-function removeDiacritics(str: string) {
-  return str.normalize('NFD')
+// Helper function to chuẩn hóa text cho việc tìm kiếm
+function normalizeText(text: string): string {
+  if (!text) return '';
+  return text
+    .toLowerCase()
+    .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[đĐ]/g, 'd')
-    .toLowerCase();
+    .replace(/[^a-z0-9\s]/g, '');
+}
+
+// Tính điểm phù hợp của kết quả tìm kiếm
+function getMatchScore(user: User, searchTerms: string[]): number {
+  let score = 0;
+  const normalizedName = normalizeText(user.name);
+  const normalizedUsername = normalizeText(user.username);
+  const normalizedDepartment = user.department ? normalizeText(user.department) : '';
+
+  for (const term of searchTerms) {
+    const normalizedTerm = normalizeText(term);
+
+    // Tên trùng khớp hoàn toàn
+    if (normalizedName === normalizedTerm) score += 100;
+    // Mã nhân viên trùng khớp hoàn toàn
+    if (normalizedUsername === normalizedTerm) score += 100;
+    // Tên chứa từ khóa
+    if (normalizedName.includes(normalizedTerm)) score += 50;
+    // Mã nhân viên chứa từ khóa
+    if (normalizedUsername.includes(normalizedTerm)) score += 40;
+    // Bộ phận chứa từ khóa
+    if (normalizedDepartment.includes(normalizedTerm)) score += 30;
+  }
+
+  return score;
 }
 
 export function SendThanks() {
@@ -111,30 +139,17 @@ export function SendThanks() {
     },
   });
 
-  // Filter and sort users based on search term
-  const filteredUsers = users?.filter((u) => {
-    if (!searchTerm.trim()) return true;
-    if (u.id === user?.id) return false;
-
-    const searchNormalized = removeDiacritics(searchTerm.trim());
-    const nameNormalized = removeDiacritics(u.name);
-    const usernameNormalized = removeDiacritics(u.username);
-    const departmentNormalized = u.department ? removeDiacritics(u.department) : '';
-
-    // Match each word in the search term
-    const searchWords = searchNormalized.split(/\s+/);
-    return searchWords.every(word => 
-      nameNormalized.includes(word) ||
-      usernameNormalized.includes(word) ||
-      departmentNormalized.includes(word)
-    );
-  }).sort((a, b) => {
-    // Sort by relevance - exact matches first
-    const searchLower = searchTerm.toLowerCase();
-    const aMatch = a.name.toLowerCase().includes(searchLower) ? 1 : 0;
-    const bMatch = b.name.toLowerCase().includes(searchLower) ? 1 : 0;
-    return bMatch - aMatch;
-  });
+  // Lọc và sắp xếp danh sách người dùng
+  const filteredUsers = users
+    ?.filter(u => u.id !== user?.id) // Loại bỏ người dùng hiện tại
+    .map(u => {
+      const searchTerms = searchTerm.trim().split(/\s+/);
+      const score = getMatchScore(u, searchTerms);
+      return { user: u, score };
+    })
+    .filter(({ score }) => score > 0 || !searchTerm.trim()) // Chỉ giữ lại các kết quả có điểm > 0 hoặc không có từ khóa tìm kiếm
+    .sort((a, b) => b.score - a.score) // Sắp xếp theo điểm số giảm dần
+    .map(({ user }) => user);
 
   return (
     <Card>
