@@ -876,7 +876,38 @@ function EmployeeManagementPage() {
                     )}
                   </TableCell>
                   <TableCell>
-                    {managers?.find(m => m.id === employee.managerId)?.name || "N/A"}
+                    {user?.role === "admin" && employee.role !== "admin" ? (
+                      <Select
+                        value={employee.managerId?.toString() || "none"}
+                        onValueChange={(value) =>
+                          updateManagerMutation.mutate({
+                            userId: employee.id,
+                            managerId: value === "none" ? null : parseInt(value)
+                          })
+                        }
+                      >
+                        <SelectTrigger className="w-[200px]">
+                          <SelectValue>
+                            {employee.managerId
+                              ? managers?.find(m => m.id === employee.managerId)?.name
+                              : "Không có quản lý"
+                            }
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Không có quản lý</SelectItem>
+                          {managers?.filter(m => m.id !== employee.id).map((manager) => (
+                            <SelectItem key={manager.id} value={manager.id.toString()}>
+                              {manager.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <span className="text-muted-foreground">
+                        {managers?.find(m => m.id === employee.managerId)?.name || "Không có quản lý"}
+                      </span>
+                    )}
                   </TableCell>
                   {user?.role === "admin" && (
                     <TableCell>
