@@ -43,6 +43,18 @@ import * as XLSX from 'xlsx';
 import { Progress } from "@/components/ui/progress";
 import { z } from "zod";
 
+const bulkUpdateSchema = z.object({
+  title: z.string().optional(),
+  department: z.string().optional(),
+  managerId: z.union([
+    z.literal("unchanged"),
+    z.literal("none"),
+    z.string().regex(/^\d+$/, "Manager ID must be a number")
+  ])
+});
+
+type BulkUpdateFormData = z.infer<typeof bulkUpdateSchema>;
+
 export default function EmployeeManagementPage() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -61,12 +73,13 @@ export default function EmployeeManagementPage() {
   const [selectedEmployees, setSelectedEmployees] = useState<number[]>([]);
 
   // Form for bulk update
-  const bulkUpdateForm = useForm({
+  const bulkUpdateForm = useForm<BulkUpdateFormData>({
     defaultValues: {
       title: "",
       department: "",
       managerId: "unchanged", // Set default value to "unchanged"
     },
+    resolver: zodResolver(bulkUpdateSchema)
   });
 
   const form = useForm({
@@ -273,12 +286,13 @@ export default function EmployeeManagementPage() {
       employeeIds: number[];
       title?: string;
       department?: string;
-      managerId?: number | null | "unchanged";
+      managerId?: number | null;
     }) => {
-      // Only send managerId if it's not "unchanged"
       const payload = {
-        ...data,
-        managerId: data.managerId === "unchanged" ? undefined : data.managerId
+        employeeIds: data.employeeIds,
+        ...(data.title?.trim() ? { title: data.title.trim() } : {}),
+        ...(data.department?.trim() ? { department: data.department.trim() } : {}),
+        ...(data.managerId !== undefined ? { managerId: data.managerId } : {})
       };
 
       const res = await apiRequest("PATCH", "/api/users/bulk-update", payload);
@@ -307,16 +321,26 @@ export default function EmployeeManagementPage() {
   });
 
   // Update bulk update form submit handler
-  const onBulkUpdateSubmit = (data: any) => {
-    const updateData: any = {
-      employeeIds: selectedEmployees,
-      managerId: "unchanged" // Default value
+  const onBulkUpdateSubmit = (data: BulkUpdateFormData) => {
+    const updateData: {
+      employeeIds: number[];
+      title?: string;
+      department?: string;
+      managerId?: number | null;
+    } = {
+      employeeIds: selectedEmployees
     };
 
-    if (data.title?.trim()) updateData.title = data.title.trim();
-    if (data.department?.trim()) updateData.department = data.department.trim();
+    if (data.title?.trim()) {
+      updateData.title = data.title.trim();
+    }
+
+    if (data.department?.trim()) {
+      updateData.department = data.department.trim();
+    }
+
     if (data.managerId && data.managerId !== "unchanged") {
-      updateData.managerId = data.managerId === "none" ? null : Number(data.managerId);
+      updateData.managerId = data.managerId === "none" ? null : parseInt(data.managerId);
     }
 
     bulkUpdateMutation.mutate(updateData);
@@ -908,8 +932,7 @@ export default function EmployeeManagementPage() {
                     <SelectItem value="50">50</SelectItem>
                     <SelectItem value="100">100</SelectItem>
                   </SelectContent>
-                </Select>
-                <Label>dòng mỗi trang</Label>
+                </Select>                <Label>dòng mỗi trang</Label>
               </div>
               <div className="text-sm text-muted-foreground">
                 Trang {currentPage}/{totalPages} ({totalFilteredItems} nhân viên)
@@ -928,7 +951,7 @@ export default function EmployeeManagementPage() {
                 variant="outline"
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                            >
+              >
                 Trang trước
               </Button>
 
