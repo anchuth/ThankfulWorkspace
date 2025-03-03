@@ -45,29 +45,17 @@ export default function ApprovalPage() {
     return <Redirect to="/" />;
   }
 
-  const { data: thanks, isLoading } = useQuery<Thanks[]>({
-    queryKey: ["/api/approvals"],
+  const { data: pendingThanks } = useQuery<Thanks[]>({
+    queryKey: ["/api/approvals", "pending"],
+  });
+
+  const { data: historyThanks } = useQuery<Thanks[]>({
+    queryKey: ["/api/approvals", "history"],
   });
 
   const { data: users } = useQuery<User[]>({
     queryKey: ["/api/users"],
   });
-
-  // Get managed users' IDs
-  const managedUsers = users?.filter(u => u.managerId === user?.id) || [];
-  const managedUserIds = managedUsers.map(u => u.id);
-
-  // Get pending thanks for managed users
-  const pendingThanks = thanks?.filter(t => 
-    t.status === "pending" && 
-    managedUserIds.includes(t.toId)
-  );
-
-  // Get history thanks (approved/rejected by current manager OR for managed users)
-  const historyThanks = thanks?.filter(t => 
-    (t.status === "approved" || t.status === "rejected") && 
-    (t.approvedById === user?.id || managedUserIds.includes(t.toId))
-  );
 
   // Mutation để cập nhật lời cảm ơn
   const updateMutation = useMutation({
@@ -123,7 +111,7 @@ export default function ApprovalPage() {
     });
   };
 
-  if (isLoading) {
+  if (!users || !pendingThanks || !historyThanks) {
     return (
       <Layout>
         <div className="flex items-center justify-center min-h-screen">
@@ -151,9 +139,9 @@ export default function ApprovalPage() {
 
           <TabsContent value="pending" className="space-y-4">
             <div className="space-y-4">
-              {pendingThanks?.map((thanks) => {
-                const fromUser = users?.find((u) => u.id === thanks.fromId);
-                const toUser = users?.find((u) => u.id === thanks.toId);
+              {pendingThanks.map((thanks) => {
+                const fromUser = users.find((u) => u.id === thanks.fromId);
+                const toUser = users.find((u) => u.id === thanks.toId);
 
                 return (
                   <Card key={thanks.id}>
@@ -202,7 +190,7 @@ export default function ApprovalPage() {
                   </Card>
                 );
               })}
-              {(!pendingThanks || pendingThanks.length === 0) && (
+              {pendingThanks.length === 0 && (
                 <Card>
                   <CardContent className="py-8 text-center text-muted-foreground">
                     Không có lời cảm ơn nào chờ duyệt
@@ -214,10 +202,10 @@ export default function ApprovalPage() {
 
           <TabsContent value="history" className="space-y-4">
             <div className="space-y-4">
-              {historyThanks?.map((thanks) => {
-                const fromUser = users?.find((u) => u.id === thanks.fromId);
-                const toUser = users?.find((u) => u.id === thanks.toId);
-                const approvedByUser = users?.find((u) => u.id === thanks.approvedById);
+              {historyThanks.map((thanks) => {
+                const fromUser = users.find((u) => u.id === thanks.fromId);
+                const toUser = users.find((u) => u.id === thanks.toId);
+                const approvedByUser = users.find((u) => u.id === thanks.approvedById);
 
                 return (
                   <Card key={thanks.id}>
@@ -260,7 +248,7 @@ export default function ApprovalPage() {
                   </Card>
                 );
               })}
-              {(!historyThanks || historyThanks.length === 0) && (
+              {historyThanks.length === 0 && (
                 <Card>
                   <CardContent className="py-8 text-center text-muted-foreground">
                     Chưa có lời cảm ơn nào được xử lý
