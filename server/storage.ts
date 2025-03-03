@@ -237,7 +237,7 @@ export class DatabaseStorage implements IStorage {
   async deleteUser(userId: number): Promise<void> {
     try {
       await db.transaction(async (tx) => {
-        // First delete all thanks sent by or to this user
+        // First delete all thanks related to this user
         await tx
           .delete(thanks)
           .where(
@@ -247,6 +247,12 @@ export class DatabaseStorage implements IStorage {
               eq(thanks.approvedById, userId)
             )
           );
+
+        // Update users who have this user as their manager to have no manager
+        await tx
+          .update(users)
+          .set({ managerId: null })
+          .where(eq(users.managerId, userId));
 
         // Then delete the user
         await tx

@@ -134,17 +134,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
-      await storage.deleteUser(userId);
-      res.sendStatus(200);
-    } catch (error) {
-      console.error("Error deleting user:", error);
-
       // Check if the user is a manager with employees
       const employees = await storage.getUsersByManagerId(userId);
       if (employees.length > 0) {
         return res.status(400).send("Không thể xóa nhân viên này vì họ đang là quản lý của nhân viên khác");
       }
 
+      await storage.deleteUser(userId);
+      res.sendStatus(200);
+    } catch (error) {
+      console.error("Error deleting user:", error);
       res.status(500).send("Không thể xóa nhân viên do có lỗi xảy ra");
     }
   });
