@@ -391,18 +391,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get list of valid IDs
-      const userIds = nonAdminUsers.map(u => u.id).filter(id => !isNaN(id));
+      const userIds = nonAdminUsers.map(u => u.id);
 
       console.log("Processing deletion for users:", userIds);
-
-      // Check manager constraints
-      for (const user of nonAdminUsers) {
-        if (!user.id) continue;
-        const employees = await storage.getUsersByManagerId(user.id);
-        if (employees && employees.length > 0) {
-          return res.status(400).send(`Không thể xóa nhân viên "${user.name}" vì họ đang là quản lý của ${employees.length} nhân viên khác`);
-        }
-      }
 
       // Execute deletion
       await storage.deleteManyUsers(userIds);
