@@ -40,7 +40,6 @@ import { useForm } from "react-hook-form";
 import { Search, Plus, Download, Upload } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as XLSX from 'xlsx';
-import { Progress } from "@/components/ui/progress";
 import { z } from "zod";
 
 const bulkUpdateSchema = z.object({
@@ -55,7 +54,7 @@ const bulkUpdateSchema = z.object({
 
 type BulkUpdateFormData = z.infer<typeof bulkUpdateSchema>;
 
-export default function EmployeeManagementPage() {
+function EmployeeManagementPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -912,213 +911,92 @@ export default function EmployeeManagementPage() {
         </div>
 
         {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Label>Hiển thị</Label>
-                <Select
-                  value={pageSize.toString()}
-                  onValueChange={(value) => {
-                    setPageSize(Number(value));
-                    setCurrentPage(1); // Reset to first page when changing page size
-                  }}
-                >
-                  <SelectTrigger className="w-[100px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="10">10</SelectItem>
-                    <SelectItem value="20">20</SelectItem>
-                    <SelectItem value="50">50</SelectItem>
-                    <SelectItem value="100">100</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Label className="ml-2">dòng mỗi trang</Label>
-              </div>
-              <div className="text-sm text-muted-foreground">
-                Trang {currentPage}/{totalPages} ({totalFilteredItems} nhân viên)
-              </div>
-
-            </div>
-
-            <div className="flex justify-center gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setCurrentPage(1)}
-                disabled={currentPage === 1}
-              >
-                Trang đầu
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-              >
-                Trang trước
-              </Button>
-
-              <div className="flex gap-2">
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  let pageNum;
-                  if (totalPages <= 5) {
-                    pageNum = i + 1;
-                  } else if (currentPage <= 3) {
-                    pageNum = i + 1;
-                  } else if (currentPage >= totalPages - 2) {
-                    pageNum = totalPages - 4 + i;
-                  } else {
-                    pageNum = currentPage - 2 + i;
-                  }
-
-                  return (
-                    <Button
-                      key={pageNum}
-                      variant={currentPage === pageNum ? "default" : "outline"}
-                      onClick={() => setCurrentPage(pageNum)}
-                    >
-                      {pageNum}
-                    </Button>
-                  );
-                })}
-                {totalPages > 5 && currentPage < 2 && (
-                  <>
-                    <span className="px-2 flex items-center">...</span>
-                    <Button
-                      variant="outline"
-                      onClick={() => setCurrentPage(totalPages)}
-                    >
-                      {totalPages}
-                    </Button>
-                  </>
-                )}
-              </div>
-
-              <Button
-                variant="outline"
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-              >
-                Trang sau
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setCurrentPage(totalPages)}
-                disabled={currentPage === totalPages}
-              >
-                Trang cuối
-              </Button>
-            </div>
+        <div className="flex items-center justify-between mt-4">
+          <div className="flex items-center gap-2">
+            <Select 
+              value={pageSize.toString()} 
+              onValueChange={(value) => {
+                setPageSize(Number(value));
+                setCurrentPage(1);
+              }}
+            >
+              <SelectTrigger className="w-[100px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+                <SelectItem value="100">100</SelectItem>
+              </SelectContent>
+            </Select>
+            <Label>dòng mỗi trang</Label>
           </div>
-        )}
+          <div className="text-sm text-muted-foreground">
+            Trang {currentPage}/{totalPages} ({totalFilteredItems} nhân viên)
+          </div>
+        </div>
 
-        {/* Dialog hiển thị chi tiết nhân viên */}
-        <Dialog open={!!selectedUser} onOpenChange={(open) => !open && setSelectedUser(null)}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Thông tin nhân viên</DialogTitle>
-              <DialogDescription>
-                Chi tiết thông tin của nhân viên {selectedUser?.name}
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <div>
-                <p className="font-medium">Mã số nhân viên</p>
-                <p className="text-sm text-muted-foreground">{selectedUser?.username}</p>
-              </div>
-              <div>
-                <p className="font-medium">Họ và tên</p>
-                <p className="text-sm text-muted-foreground">{selectedUser?.name}</p>
-              </div>
-              <div>
-                <p className="font-medium">Email</p>
-                {user?.role === "admin" ? (
-                  <div className="space-y-2">
-                    <Input
-                      type="email"
-                      {...form.register("email")}
-                      placeholder="Nhập email"
-                    />
-                    {form.formState.errors.email && (
-                      <p className="text-sm text-destructive">
-                        {form.formState.errors.email.message}
-                      </p>
-                    )}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">{selectedUser?.email}</p>
-                )}
-              </div>
-              {user?.role === "admin" ? (
-                <>
-                  <div className="space-y-2">
-                    <Label htmlFor="title">Chức danh</Label>
-                    <Input
-                      id="title"
-                      {...form.register("title")}
-                      placeholder="Nhập chức danh"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="department">Bộ phận</Label>
-                    <Input
-                      id="department"
-                      {...form.register("department")}
-                      placeholder="Nhập bộ phận"
-                    />
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div>
-                    <p className="font-medium">Chức danh</p>
-                    <p className="text-sm text-muted-foreground">
-                      {selectedUser?.title || "Chưa cập nhật"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="font-medium">Bộ phận</p>
-                    <p className="text-sm text-muted-foreground">
-                      {selectedUser?.department || "Chưa cập nhật"}
-                    </p>
-                  </div>
-                </>
-              )}
-              <div>
-                <p className="font-medium">Chức vụ</p>
-                <p className="text-sm text-muted-foreground">
-                  {selectedUser?.role === "admin" ? "Quản trị viên" :
-                    selectedUser?.role === "manager" ? "Quản lý" : "Nhân viên"}
-                </p>
-              </div>
-              <div>
-                <p className="font-medium">Quản lý trực tiếp</p>
-                <p className="text-sm text-muted-foreground">
-                  {employees?.find(e => e.id === selectedUser?.managerId)?.name || "Không có"}
-                </p>
-              </div>
-              <div>
-                <p className="font-medium">Nhân viên quản lý</p>
-                <div className="text-sm text-muted-foreground">
-                  {employees?.filter(e => e.managerId === selectedUser?.id).length
-                    ? employees
-                      .filter(e => e.managerId === selectedUser?.id)
-                      .map(e => e.name)
-                      .join(", ")
-                    : "Không có"}
-                </div>
-              </div>
-              {user?.role === "admin" && (
-                <DialogFooter>
-                  <Button type="submit" disabled={updateEmployeeMutation.isPending}>
-                    {updateEmployeeMutation.isPending ? "Đang cập nhật..." : "Lưu thay đổi"}
-                  </Button>
-                </DialogFooter>
-              )}
-            </form>
-          </DialogContent>
-        </Dialog>
+        <div className="flex justify-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(1)}
+            disabled={currentPage === 1}
+          >
+            Đầu`
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+            disabled={currentPage === 1}
+          >
+            Trước
+          </Button>
+          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+            let pageNum;
+            if (totalPages <= 5) {
+              pageNum = i + 1;
+            } else if (currentPage <= 3) {
+              pageNum = i + 1;
+            } else if (currentPage >= totalPages - 2) {
+              pageNum = totalPages - 4 + i;
+            } else {
+              pageNum = currentPage - 2 + i;
+            }
+
+            return (
+              <Button
+                key={pageNum}
+                variant={currentPage === pageNum ? "default" : "outline"}
+                size="sm"
+                onClick={() => setCurrentPage(pageNum)}
+              >
+                {pageNum}
+              </Button>
+            );
+          })}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+            disabled={currentPage === totalPages}
+          >
+            Sau
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(totalPages)}
+            disabled={currentPage === totalPages}
+          >
+            Cuối
+          </Button>
+        </div>
       </div>
     </Layout>
   );
 }
+
+export default EmployeeManagementPage;
