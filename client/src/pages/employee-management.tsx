@@ -90,8 +90,8 @@ export default function EmployeeManagementPage() {
         <div>
           <h1 className="text-3xl font-bold mb-2">Quản lý nhân viên</h1>
           <p className="text-muted-foreground">
-            {user?.role === "admin" 
-              ? "Quản lý tất cả nhân viên trong hệ thống" 
+            {user?.role === "admin"
+              ? "Quản lý tất cả nhân viên trong hệ thống"
               : "Quản lý nhân viên trong nhóm của bạn"}
           </p>
         </div>
@@ -138,19 +138,19 @@ export default function EmployeeManagementPage() {
                       </Select>
                     ) : (
                       <Badge variant={employee.role === "manager" ? "default" : "secondary"}>
-                        {employee.role === "admin" ? "Admin" : 
-                         employee.role === "manager" ? "Quản lý" : "Nhân viên"}
+                        {employee.role === "admin" ? "Admin" :
+                          employee.role === "manager" ? "Quản lý" : "Nhân viên"}
                       </Badge>
                     )}
                   </TableCell>
                   <TableCell>
                     {user?.role === "admin" && employee.role !== "admin" ? (
                       <Select
-                        value={employee.managerId?.toString() || ""}
+                        value={employee.managerId?.toString() || "none"}
                         onValueChange={(managerId) =>
                           updateManagerMutation.mutate({
                             userId: employee.id,
-                            managerId: managerId ? parseInt(managerId) : null,
+                            managerId: managerId === "none" ? null : parseInt(managerId),
                           })
                         }
                       >
@@ -158,7 +158,7 @@ export default function EmployeeManagementPage() {
                           <SelectValue placeholder="Chọn quản lý" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Không có quản lý</SelectItem>
+                          <SelectItem value="none">Không có quản lý</SelectItem>
                           {managers
                             ?.filter((m) => m.id !== employee.id)
                             .map((manager) => (
@@ -212,7 +212,7 @@ export default function EmployeeManagementPage() {
               <p className="font-medium">Chức vụ</p>
               <p className="text-sm text-muted-foreground">
                 {selectedUser?.role === "admin" ? "Quản trị viên" :
-                 selectedUser?.role === "manager" ? "Quản lý" : "Nhân viên"}
+                  selectedUser?.role === "manager" ? "Quản lý" : "Nhân viên"}
               </p>
             </div>
             <div>
@@ -226,9 +226,9 @@ export default function EmployeeManagementPage() {
               <div className="text-sm text-muted-foreground">
                 {employees?.filter(e => e.managerId === selectedUser?.id).length
                   ? employees
-                      .filter(e => e.managerId === selectedUser?.id)
-                      .map(e => e.name)
-                      .join(", ")
+                    .filter(e => e.managerId === selectedUser?.id)
+                    .map(e => e.name)
+                    .join(", ")
                   : "Không có"}
               </div>
             </div>
