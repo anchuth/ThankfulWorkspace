@@ -126,12 +126,7 @@ export class DatabaseStorage implements IStorage {
     return await db
       .select()
       .from(thanks)
-      .where(
-        and(
-          eq(thanks.toId, userId),
-          eq(thanks.status, "approved")
-        )
-      )
+      .where(eq(thanks.toId, userId))
       .orderBy(desc(thanks.createdAt));
   }
 

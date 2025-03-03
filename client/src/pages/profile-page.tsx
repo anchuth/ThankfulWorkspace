@@ -171,11 +171,18 @@ function ThanksCard({ thanks }: { thanks: Thanks }) {
           })}
         </CardTitle>
         <Badge variant={thanks.status === "approved" ? "default" : "secondary"}>
-          {thanks.status}
+          {thanks.status === "pending" ? "Chờ duyệt" : 
+           thanks.status === "approved" ? "Đã duyệt" :
+           "Từ chối"}
         </Badge>
       </CardHeader>
       <CardContent>
         <p className="text-sm">{thanks.message}</p>
+        {thanks.status === "rejected" && thanks.rejectReason && (
+          <p className="text-sm text-destructive mt-2">
+            Lý do từ chối: {thanks.rejectReason}
+          </p>
+        )}
       </CardContent>
     </Card>
   );
