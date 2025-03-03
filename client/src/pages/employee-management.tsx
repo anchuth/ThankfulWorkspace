@@ -876,7 +876,7 @@ function EmployeeManagementPage() {
                     )}
                   </TableCell>
                   <TableCell>
-                    {employees?.find(e => e.id === employee.managerId)?.name || "N/A"}
+                    {managers?.find(m => m.id === employee.managerId)?.name || "N/A"}
                   </TableCell>
                   {user?.role === "admin" && (
                     <TableCell>
@@ -913,8 +913,8 @@ function EmployeeManagementPage() {
         {/* Pagination */}
         <div className="flex items-center justify-between mt-4">
           <div className="flex items-center gap-2">
-            <Select 
-              value={pageSize.toString()} 
+            <Select
+              value={pageSize.toString()}
               onValueChange={(value) => {
                 setPageSize(Number(value));
                 setCurrentPage(1);
