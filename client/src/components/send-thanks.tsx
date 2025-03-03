@@ -75,10 +75,13 @@ const TEMPLATE_MESSAGES = [
 
 // Helper function to normalize Vietnamese text for search
 function normalizeText(text: string): string {
+  if (!text) return '';
   return text
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[đĐ]/g, 'd')
+    .replace(/[^a-z0-9\s]/g, '');
 }
 
 export function SendThanks() {
@@ -120,10 +123,14 @@ export function SendThanks() {
     const normalizedUsername = normalizeText(u.username);
     const normalizedDepartment = u.department ? normalizeText(u.department) : '';
 
-    return (
-      normalizedName.includes(normalizedSearch) ||
-      normalizedUsername.includes(normalizedSearch) ||
-      normalizedDepartment.includes(normalizedSearch)
+    // Split search term into words for more flexible matching
+    const searchWords = normalizedSearch.split(/\s+/);
+
+    // Check if all search words are found in any of the fields
+    return searchWords.every(word => 
+      normalizedName.includes(word) ||
+      normalizedUsername.includes(word) ||
+      normalizedDepartment.includes(word)
     );
   });
 
