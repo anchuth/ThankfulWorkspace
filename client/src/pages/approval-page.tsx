@@ -23,13 +23,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
 import { Redirect } from "wouter";
@@ -39,8 +32,6 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-
-type ThanksStatus = "pending" | "approved" | "rejected" | "all";
 
 export default function ApprovalPage() {
   const { user } = useAuth();
@@ -62,6 +53,7 @@ export default function ApprovalPage() {
     queryKey: ["/api/users"],
   });
 
+  // Mutation để cập nhật lời cảm ơn
   const updateMutation = useMutation({
     mutationFn: async ({
       thanksId,
@@ -72,7 +64,10 @@ export default function ApprovalPage() {
       action: "approve" | "reject";
       reason?: string;
     }) => {
-      const res = await apiRequest("POST", `/api/thanks/${thanksId}/${action}`, { reason });
+      const res = await apiRequest("POST", `/api/thanks/${thanksId}/${action}`, {
+        reason,
+        approvedById: user?.id, // Thêm approvedById vào request
+      });
       if (!res.ok) {
         const error = await res.text();
         throw new Error(error);
@@ -128,7 +123,11 @@ export default function ApprovalPage() {
     t.approvedById === user?.id
   );
 
-  console.log('Current user:', user?.id);
+  // Debug logs
+  console.log('Current user:', user);
+  console.log('All thanks:', thanks);
+  console.log('Managed users:', managedUsers);
+  console.log('Pending thanks:', pendingThanks);
   console.log('History thanks:', historyThanks);
 
   if (isLoading) {
