@@ -53,6 +53,22 @@ export default function ApprovalPage() {
     queryKey: ["/api/users"],
   });
 
+  // Get managed users' IDs
+  const managedUsers = users?.filter(u => u.managerId === user?.id) || [];
+  const managedUserIds = managedUsers.map(u => u.id);
+
+  // Get pending thanks for managed users
+  const pendingThanks = thanks?.filter(t => 
+    t.status === "pending" && 
+    managedUserIds.includes(t.toId)
+  );
+
+  // Get history thanks (approved/rejected by current manager OR for managed users)
+  const historyThanks = thanks?.filter(t => 
+    (t.status === "approved" || t.status === "rejected") && 
+    (t.approvedById === user?.id || managedUserIds.includes(t.toId))
+  );
+
   // Mutation để cập nhật lời cảm ơn
   const updateMutation = useMutation({
     mutationFn: async ({
@@ -66,7 +82,7 @@ export default function ApprovalPage() {
     }) => {
       const res = await apiRequest("POST", `/api/thanks/${thanksId}/${action}`, {
         reason,
-        approvedById: user?.id, // Thêm approvedById vào request
+        approvedById: user?.id,
       });
       if (!res.ok) {
         const error = await res.text();
@@ -106,29 +122,6 @@ export default function ApprovalPage() {
       reason: rejectReason,
     });
   };
-
-  // Get managed users' IDs
-  const managedUsers = users?.filter(u => u.managerId === user?.id) || [];
-  const managedUserIds = managedUsers.map(u => u.id);
-
-  // Get pending thanks for managed users
-  const pendingThanks = thanks?.filter(t => 
-    t.status === "pending" && 
-    managedUserIds.includes(t.toId)
-  );
-
-  // Get history thanks (approved/rejected by current manager)
-  const historyThanks = thanks?.filter(t => 
-    (t.status === "approved" || t.status === "rejected") && 
-    t.approvedById === user?.id
-  );
-
-  // Debug logs
-  console.log('Current user:', user);
-  console.log('All thanks:', thanks);
-  console.log('Managed users:', managedUsers);
-  console.log('Pending thanks:', pendingThanks);
-  console.log('History thanks:', historyThanks);
 
   if (isLoading) {
     return (
@@ -224,6 +217,7 @@ export default function ApprovalPage() {
               {historyThanks?.map((thanks) => {
                 const fromUser = users?.find((u) => u.id === thanks.fromId);
                 const toUser = users?.find((u) => u.id === thanks.toId);
+                const approvedByUser = users?.find((u) => u.id === thanks.approvedById);
 
                 return (
                   <Card key={thanks.id}>
@@ -240,6 +234,11 @@ export default function ApprovalPage() {
                                   addSuffix: true,
                                 })}
                               </>
+                            )}
+                            {approvedByUser && (
+                              <div className="text-sm text-muted-foreground mt-1">
+                                Người duyệt: {approvedByUser.name}
+                              </div>
                             )}
                           </CardDescription>
                         </div>
