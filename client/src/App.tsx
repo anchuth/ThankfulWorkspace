@@ -11,6 +11,7 @@ import EmployeeManagementPage from "@/pages/employee-management";
 import ThanksPage from "@/pages/thanks-page";
 import ApprovalPage from "@/pages/approval-page";
 import ThanksManagementPage from "@/pages/admin/thanks-management";
+import RankingsPage from "@/pages/rankings-page";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
 
@@ -24,6 +25,7 @@ function Router() {
       <ProtectedRoute path="/employees" component={EmployeeManagementPage} />
       <ProtectedRoute path="/approvals" component={ApprovalPage} />
       <ProtectedRoute path="/admin/thanks" component={ThanksManagementPage} />
+      <ProtectedRoute path="/rankings" component={RankingsPage} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>
