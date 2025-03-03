@@ -27,6 +27,7 @@ export interface IStorage {
   getRecentThanks(): Promise<Thanks[]>;
   updateUserRole(userId: number, role: string): Promise<User>;
   updateUserInfo(userId: number, info: { title?: string; department?: string }): Promise<User>;
+  deleteUser(userId: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -219,6 +220,11 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, userId))
       .returning();
     return user;
+  }
+  async deleteUser(userId: number): Promise<void> {
+    await db
+      .delete(users)
+      .where(eq(users.id, userId));
   }
 }
 

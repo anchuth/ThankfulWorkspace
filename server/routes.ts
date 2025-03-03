@@ -14,13 +14,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(users);
   });
 
-  // Get recent thanks
-  app.get("/api/thanks/recent", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    const thanks = await storage.getRecentThanks();
-    res.json(thanks);
-  });
-
   // Get users managed by a manager
   app.get("/api/users/manager/:managerId", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
@@ -62,6 +55,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(user);
   });
 
+  // Update user information (admin only)
+  app.patch("/api/users/:userId", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (req.user!.role !== "admin") return res.sendStatus(403);
+
+    const userId = parseInt(req.params.userId);
+    const { title, department } = req.body;
+
+    const user = await storage.updateUserInfo(userId, { title, department });
+    res.json(user);
+  });
+
+  // Delete user (admin only)
+  app.delete("/api/users/:userId", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (req.user!.role !== "admin") return res.sendStatus(403);
+
+    const userId = parseInt(req.params.userId);
+
+    // Không cho phép xóa admin
+    const user = await storage.getUser(userId);
+    if (!user || user.role === "admin") {
+      return res.status(400).send("Cannot delete admin user");
+    }
+
+    await storage.deleteUser(userId);
+    res.sendStatus(200);
+  });
 
   // Send thanks
   app.post("/api/thanks", async (req, res) => {
@@ -141,18 +162,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     ]);
 
     res.json({ received, sent });
-  });
-
-  // Update user information (admin only)
-  app.patch("/api/users/:userId", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    if (req.user!.role !== "admin") return res.sendStatus(403);
-
-    const userId = parseInt(req.params.userId);
-    const { title, department } = req.body;
-
-    const user = await storage.updateUserInfo(userId, { title, department });
-    res.json(user);
   });
 
   const httpServer = createServer(app);
