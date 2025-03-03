@@ -14,6 +14,7 @@ import {
   ClipboardCheck,
   UserCircle,
   ChevronDown,
+  MessagesSquare,
 } from "lucide-react";
 import {
   Sheet,
@@ -64,6 +65,12 @@ const navigation: NavItem[] = [
     href: "/employees",
     icon: Users,
     roles: ["admin", "manager"],
+  },
+  {
+    name: "Quản lý lời cảm ơn",
+    href: "/admin/thanks",
+    icon: MessagesSquare,
+    roles: ["admin"],
   },
 ];
 

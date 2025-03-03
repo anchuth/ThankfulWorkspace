@@ -18,6 +18,7 @@ export interface IStorage {
   getThanksById(id: number): Promise<Thanks | undefined>;
   getPendingThanksForManager(managerId: number): Promise<Thanks[]>;
   getAllPendingThanks(): Promise<Thanks[]>;
+  getAllThanks(): Promise<Thanks[]>;
   updateThanksStatus(id: number, status: "approved" | "rejected", approvedById: number, reason?: string): Promise<Thanks>;
   getReceivedThanksForUser(userId: number): Promise<Thanks[]>;
   getSentThanksForUser(userId: number): Promise<Thanks[]>;
@@ -109,6 +110,13 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(thanks)
       .where(eq(thanks.status, "pending"))
+      .orderBy(desc(thanks.createdAt));
+  }
+
+  async getAllThanks(): Promise<Thanks[]> {
+    return await db
+      .select()
+      .from(thanks)
       .orderBy(desc(thanks.createdAt));
   }
 

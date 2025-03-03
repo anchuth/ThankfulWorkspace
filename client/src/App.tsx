@@ -10,6 +10,7 @@ import ProfilePage from "@/pages/profile-page";
 import EmployeeManagementPage from "@/pages/employee-management";
 import ThanksPage from "@/pages/thanks-page";
 import ApprovalPage from "@/pages/approval-page";
+import ThanksManagementPage from "@/pages/admin/thanks-management";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
 
@@ -22,6 +23,7 @@ function Router() {
       <ProtectedRoute path="/profile" component={ProfilePage} />
       <ProtectedRoute path="/employees" component={EmployeeManagementPage} />
       <ProtectedRoute path="/approvals" component={ApprovalPage} />
+      <ProtectedRoute path="/admin/thanks" component={ThanksManagementPage} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>

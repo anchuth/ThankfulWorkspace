@@ -7,6 +7,15 @@ import { insertThanksSchema } from "@shared/schema";
 export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
 
+  // Get all thanks (admin only)
+  app.get("/api/admin/thanks", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (req.user!.role !== "admin") return res.sendStatus(403);
+
+    const thanks = await storage.getAllThanks();
+    res.json(thanks);
+  });
+
   // Get all users (for user selection)
   app.get("/api/users", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
