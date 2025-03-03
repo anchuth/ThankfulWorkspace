@@ -273,9 +273,13 @@ export default function EmployeeManagementPage() {
       employeeIds: number[];
       title?: string;
       department?: string;
-      managerId?: string | null;
+      managerId?: number | null;
     }) => {
       const res = await apiRequest("PATCH", "/api/users/bulk-update", data);
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to update users");
+      }
       return res.json();
     },
     onSuccess: () => {
@@ -433,8 +437,7 @@ export default function EmployeeManagementPage() {
     if (data.title?.trim()) updateData.title = data.title.trim();
     if (data.department?.trim()) updateData.department = data.department.trim();
     if (data.managerId && data.managerId !== "unchanged") {
-      updateData.managerId = data.managerId === "none" ? null : 
-        (typeof data.managerId === 'number' ? data.managerId : parseInt(data.managerId));
+      updateData.managerId = data.managerId === "none" ? null : Number(data.managerId);
     }
 
     bulkUpdateMutation.mutate(updateData);
@@ -522,6 +525,7 @@ export default function EmployeeManagementPage() {
                     Cập nhật thông tin cho {selectedEmployees.length} nhân viên đã chọn
                   </DialogDescription>
                 </DialogHeader>
+                {/* Update the bulk update dialog form section */}
                 <form onSubmit={bulkUpdateForm.handleSubmit(onBulkUpdateSubmit)} className="space-y-4">
                   <div className="space-y-2">
                     <Label>Chức danh (để trống nếu không thay đổi)</Label>
@@ -534,7 +538,7 @@ export default function EmployeeManagementPage() {
                   <div className="space-y-2">
                     <Label>Quản lý trực tiếp</Label>
                     <Select
-                      value={bulkUpdateForm.watch("managerId")}
+                      value={bulkUpdateForm.watch("managerId") || "unchanged"}
                       onValueChange={(value) => bulkUpdateForm.setValue("managerId", value)}
                     >
                       <SelectTrigger>
@@ -931,16 +935,16 @@ export default function EmployeeManagementPage() {
                       key={pageNum}
                       variant={currentPage === pageNum ? "default" : "outline"}
                       onClick={() => setCurrentPage(pageNum)}
-                    >
+                                        >
                       {pageNum}
                     </Button>
                   );
                 })}
-                {totalPages > 5 && currentPage < totalPages - 2 && (
+                {totalPages > 5 && currentPage < 2 && (
                   <>
                     <span className="px-2 flex items-center">...</span>
                     <Button
-                                            variant="outline"
+                      variant="outline"
                       onClick={() => setCurrentPage(totalPages)}
                     >
                       {totalPages}
