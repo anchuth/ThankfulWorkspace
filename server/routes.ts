@@ -143,6 +143,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ received, sent });
   });
 
+  // Update user information (admin only)
+  app.patch("/api/users/:userId", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (req.user!.role !== "admin") return res.sendStatus(403);
+
+    const userId = parseInt(req.params.userId);
+    const { title, department } = req.body;
+
+    const user = await storage.updateUserInfo(userId, { title, department });
+    res.json(user);
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

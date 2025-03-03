@@ -26,6 +26,7 @@ export interface IStorage {
   updateUserPassword(userId: number, newPassword: string): Promise<User>;
   getRecentThanks(): Promise<Thanks[]>;
   updateUserRole(userId: number, role: string): Promise<User>;
+  updateUserInfo(userId: number, info: { title?: string; department?: string }): Promise<User>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -207,6 +208,14 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db
       .update(users)
       .set({ role })
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
+  }
+  async updateUserInfo(userId: number, info: { title?: string; department?: string }): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set(info)
       .where(eq(users.id, userId))
       .returning();
     return user;

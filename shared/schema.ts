@@ -9,6 +9,8 @@ export const users = pgTable("users", {
   username: text("username").notNull().unique(), // Employee ID
   password: text("password").notNull(),
   name: text("name").notNull(),
+  title: text("title"), // Chức danh
+  department: text("department"), // Bộ phận
   managerId: integer("manager_id").references(() => users.id),
   role: text("role", { enum: ["employee", "manager", "admin"] }).notNull().default("employee"),
 });
@@ -73,9 +75,13 @@ export const insertUserSchema = createInsertSchema(users)
     password: true,
     name: true,
     managerId: true,
+    title: true,
+    department: true,
   })
   .extend({
     managerId: z.number().optional(),
+    title: z.string().optional(),
+    department: z.string().optional(),
   });
 
 export const insertThanksSchema = createInsertSchema(thanks)

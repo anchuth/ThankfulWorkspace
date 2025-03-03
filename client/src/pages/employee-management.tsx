@@ -31,6 +31,8 @@ import {
 } from "@/components/ui/dialog";
 import { useState } from "react";
 import { Redirect } from "wouter";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export default function EmployeeManagementPage() {
   const { user } = useAuth();
@@ -79,6 +81,21 @@ export default function EmployeeManagementPage() {
     },
   });
 
+    // Mutation để cập nhật thông tin nhân viên
+  const updateEmployeeMutation = useMutation({
+    mutationFn: async ({ userId, data }: { userId: number; data: Partial<User> }) => {
+      const res = await apiRequest("PATCH", `/api/users/${userId}`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      toast({
+        title: "Cập nhật thành công",
+        description: "Đã cập nhật thông tin nhân viên",
+      });
+    },
+  });
+
   // Redirect if not manager/admin
   if (user?.role !== "manager" && user?.role !== "admin") {
     return <Redirect to="/" />;
@@ -102,6 +119,8 @@ export default function EmployeeManagementPage() {
               <TableRow>
                 <TableHead>Mã số</TableHead>
                 <TableHead>Tên nhân viên</TableHead>
+                <TableHead>Chức danh</TableHead>
+                <TableHead>Bộ phận</TableHead>
                 <TableHead>Chức vụ</TableHead>
                 <TableHead>Quản lý trực tiếp</TableHead>
                 {user?.role === "admin" && <TableHead>Thao tác</TableHead>}
@@ -120,6 +139,8 @@ export default function EmployeeManagementPage() {
                       {employee.name}
                     </Button>
                   </TableCell>
+                  <TableCell>{employee.title || "Chưa cập nhật"}</TableCell>
+                  <TableCell>{employee.department || "Chưa cập nhật"}</TableCell>
                   <TableCell>
                     {user?.role === "admin" && employee.role !== "admin" ? (
                       <Select
@@ -208,6 +229,51 @@ export default function EmployeeManagementPage() {
               <p className="font-medium">Họ và tên</p>
               <p className="text-sm text-muted-foreground">{selectedUser?.name}</p>
             </div>
+            {user?.role === "admin" ? (
+              <>
+                <div className="space-y-2">
+                  <Label>Chức danh</Label>
+                  <Input
+                    value={selectedUser?.title || ""}
+                    onChange={(e) =>
+                      updateEmployeeMutation.mutate({
+                        userId: selectedUser!.id,
+                        data: { title: e.target.value },
+                      })
+                    }
+                    placeholder="Nhập chức danh"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Bộ phận</Label>
+                  <Input
+                    value={selectedUser?.department || ""}
+                    onChange={(e) =>
+                      updateEmployeeMutation.mutate({
+                        userId: selectedUser!.id,
+                        data: { department: e.target.value },
+                      })
+                    }
+                    placeholder="Nhập bộ phận"
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <p className="font-medium">Chức danh</p>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedUser?.title || "Chưa cập nhật"}
+                  </p>
+                </div>
+                <div>
+                  <p className="font-medium">Bộ phận</p>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedUser?.department || "Chưa cập nhật"}
+                  </p>
+                </div>
+              </>
+            )}
             <div>
               <p className="font-medium">Chức vụ</p>
               <p className="text-sm text-muted-foreground">
