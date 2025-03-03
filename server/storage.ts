@@ -1,7 +1,7 @@
 import { InsertUser, User, Thanks, InsertThanks, users, thanks } from "@shared/schema";
 import session from "express-session";
 import { db } from "./db";
-import { eq, desc, and, gte } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
 
@@ -17,6 +17,7 @@ export interface IStorage {
   createThanks(fromId: number, thanks: InsertThanks): Promise<Thanks>;
   getThanksById(id: number): Promise<Thanks | undefined>;
   getPendingThanksForManager(managerId: number): Promise<Thanks[]>;
+  getAllPendingThanks(): Promise<Thanks[]>;
   updateThanksStatus(id: number, status: "approved" | "rejected"): Promise<Thanks>;
   getReceivedThanksForUser(userId: number): Promise<Thanks[]>;
   getSentThanksForUser(userId: number): Promise<Thanks[]>;
@@ -100,6 +101,14 @@ export class DatabaseStorage implements IStorage {
       );
   }
 
+  async getAllPendingThanks(): Promise<Thanks[]> {
+    return await db
+      .select()
+      .from(thanks)
+      .where(eq(thanks.status, "pending"))
+      .orderBy(desc(thanks.createdAt));
+  }
+
   async updateThanksStatus(id: number, status: "approved" | "rejected"): Promise<Thanks> {
     const [updated] = await db
       .update(thanks)
@@ -161,7 +170,7 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           eq(thanks.status, "approved"),
-          gte(thanks.approvedAt, cutoff)
+          //gte(thanks.approvedAt, cutoff)
         )
       );
 

@@ -63,9 +63,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get pending approvals for manager
   app.get("/api/approvals", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    if (req.user!.role !== "manager") return res.sendStatus(403);
+    if (req.user!.role !== "manager" && req.user!.role !== "admin") return res.sendStatus(403);
 
-    const approvals = await storage.getPendingThanksForManager(req.user!.id);
+    let approvals;
+    if (req.user!.role === "admin") {
+      approvals = await storage.getAllPendingThanks();
+    } else {
+      approvals = await storage.getPendingThanksForManager(req.user!.id);
+    }
     res.json(approvals);
   });
 
