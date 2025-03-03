@@ -69,7 +69,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createThanks(fromId: number, insertThanks: InsertThanks): Promise<Thanks> {
-    const [thanks] = await db
+    const [newThanks] = await db
       .insert(thanks)
       .values({
         fromId,
@@ -77,7 +77,7 @@ export class DatabaseStorage implements IStorage {
         message: insertThanks.message,
       })
       .returning();
-    return thanks;
+    return newThanks;
   }
 
   async getThanksById(id: number): Promise<Thanks | undefined> {
