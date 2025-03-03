@@ -9,6 +9,7 @@ import DashboardPage from "@/pages/dashboard-page";
 import ProfilePage from "@/pages/profile-page";
 import EmployeeManagementPage from "@/pages/employee-management";
 import ThanksPage from "@/pages/thanks-page";
+import ApprovalPage from "@/pages/approval-page";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
 
@@ -20,6 +21,7 @@ function Router() {
       <ProtectedRoute path="/dashboard" component={DashboardPage} />
       <ProtectedRoute path="/profile" component={ProfilePage} />
       <ProtectedRoute path="/employees" component={EmployeeManagementPage} />
+      <ProtectedRoute path="/approvals" component={ApprovalPage} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>

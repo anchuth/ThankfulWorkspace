@@ -11,6 +11,7 @@ import {
   Menu,
   Users,
   MessageSquare,
+  ClipboardCheck,
 } from "lucide-react";
 import {
   Sheet,
@@ -37,6 +38,12 @@ const navigation: NavItem[] = [
     name: "Gửi lời cảm ơn",
     href: "/thanks",
     icon: MessageSquare,
+  },
+  {
+    name: "Duyệt lời cảm ơn",
+    href: "/approvals",
+    icon: ClipboardCheck,
+    roles: ["manager", "admin"],
   },
   {
     name: "Dashboard",
