@@ -333,7 +333,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     try {
       // Ensure all IDs are numbers
-      const numericIds = employeeIds.map(id => 
+      const numericIds = employeeIds.map(id =>
         typeof id === 'string' ? parseInt(id, 10) : id
       ).filter(id => !isNaN(id));
 
@@ -398,6 +398,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+
+  // Add new reset password endpoint
+  app.post("/api/users/:userId/reset-password", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (req.user!.role !== "admin") return res.sendStatus(403);
+
+    const userId = parseInt(req.params.userId);
+    const { newPassword } = req.body;
+
+    if (!newPassword || !newPassword.trim()) {
+      return res.status(400).send("Mật khẩu mới không được để trống");
+    }
+
+    try {
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).send("Không tìm thấy người dùng");
+      }
+
+      // Don't allow resetting admin passwords
+      if (user.role === "admin") {
+        return res.status(403).send("Không thể reset mật khẩu của admin");
+      }
+
+      const hashedPassword = await hashPassword(newPassword);
+      await storage.updateUserPassword(userId, hashedPassword);
+
+      res.sendStatus(200);
+    } catch (error) {
+      console.error("Reset password error:", error);
+      res.status(500).send("Không thể reset mật khẩu");
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;

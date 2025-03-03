@@ -70,6 +70,10 @@ function EmployeeManagementPage() {
   const [defaultPassword, setDefaultPassword] = useState("");
   const [pageSize, setPageSize] = useState(20);
   const [selectedEmployees, setSelectedEmployees] = useState<number[]>([]);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showResetPasswordDialog, setShowResetPasswordDialog] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+
 
   // Form for bulk update
   const bulkUpdateForm = useForm<BulkUpdateFormData>({
@@ -107,6 +111,16 @@ function EmployeeManagementPage() {
       role: "employee",
       email: "",
     },
+  });
+
+  const editForm = useForm({
+    resolver: zodResolver(
+      insertUserSchema.pick({
+        title: true,
+        department: true,
+        email: true,
+      })
+    ),
   });
 
   // Lấy danh sách nhân viên tùy theo role
@@ -341,6 +355,34 @@ function EmployeeManagementPage() {
     bulkUpdateMutation.mutate(updateData);
   };
 
+  // Add reset password mutation
+  const resetPasswordMutation = useMutation({
+    mutationFn: async ({ userId, newPassword }: { userId: number; newPassword: string }) => {
+      const res = await apiRequest("POST", `/api/users/${userId}/reset-password`, { newPassword });
+      if (!res.ok) {
+        const error = await res.text();
+        throw new Error(error);
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Thành công",
+        description: "Đã reset mật khẩu cho nhân viên",
+      });
+      setSelectedUser(null);
+      setShowResetPasswordDialog(false);
+      setNewPassword("");
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Lỗi",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   // Redirect if not manager/admin
   if (user?.role !== "manager" && user?.role !== "admin") {
     return <Redirect to="/" />;
@@ -349,11 +391,12 @@ function EmployeeManagementPage() {
   // Set form values when selecting a user
   const handleSelectUser = (employee: User) => {
     setSelectedUser(employee);
-    form.reset({
+    editForm.reset({
       title: employee.title || "",
       department: employee.department || "",
       email: employee.email || "",
     });
+    setShowEditDialog(true);
   };
 
   // Handle form submission
@@ -370,6 +413,16 @@ function EmployeeManagementPage() {
   // Handle add employee form submission
   const onAddSubmit = (data: any) => {
     addEmployeeMutation.mutate(data);
+  };
+
+  // Handle edit form submission
+  const onEditSubmit = (data: any) => {
+    if (!selectedUser) return;
+    updateEmployeeMutation.mutate({
+      userId: selectedUser.id,
+      ...data,
+    });
+    setShowEditDialog(false);
   };
 
   // Filter employees
@@ -475,6 +528,7 @@ function EmployeeManagementPage() {
       );
     }
   };
+
 
 
   return (
@@ -891,13 +945,13 @@ function EmployeeManagementPage() {
                           </SelectValue>
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="none">Không có quản lý</SelectItem>
-                          {managers?.filter(m => m.id !== employee.id).map((manager) => (
-                            <SelectItem key={manager.id} value={manager.id.toString()}>
-                              {manager.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
+                        <SelectItem value="none">Không có quản lý</SelectItem>
+                        {managers?.filter(m => m.id !== employee.id).map((manager) => (
+                          <SelectItem key={manager.id} value={manager.id.toString()}>
+                            {manager.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
                       </Select>
                     ) : (
                       <span className="text-muted-foreground">
@@ -999,6 +1053,92 @@ function EmployeeManagementPage() {
           </div>
         </div>
 
+        {/* Edit Dialog */}
+        <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Sửa thông tin nhân viên</DialogTitle>
+              <DialogDescription>
+                Cập nhật thông tin cho nhân viên {selectedUser?.name}
+              </DialogDescription>
+            </DialogHeader>
+
+            <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4">
+              <div className="space-y-2">
+                <Label>Chức danh</Label>
+                <Input {...editForm.register("title")} />
+              </div>
+              <div className="space-y-2">
+                <Label>Bộ phận</Label>
+                <Input {...editForm.register("department")} />
+              </div>
+              <div className="space-y-2">
+                <Label>Email</Label>
+                <Input {...editForm.register("email")} type="email" />
+              </div>
+
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  type="button"
+                  onClick={() => setShowResetPasswordDialog(true)}
+                >
+                  Reset mật khẩu
+                </Button>
+                <Button type="submit" disabled={updateEmployeeMutation.isPending}>
+                  {updateEmployeeMutation.isPending ? "Đang cập nhật..." : "Cập nhật"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Reset Password Dialog */}
+        <Dialog open={showResetPasswordDialog} onOpenChange={setShowResetPasswordDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Reset mật khẩu</DialogTitle>
+              <DialogDescription>
+                Đặt lại mật khẩu cho nhân viên {selectedUser?.name}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Mật khẩu mới</Label>
+                <Input
+                  type="text"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Nhập mật khẩu mới"
+                />
+              </div>
+
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowResetPasswordDialog(false)}
+                >
+                  Hủy
+                </Button>
+                <Button
+                  onClick={() => {
+                    if (!selectedUser) return;
+                    resetPasswordMutation.mutate({
+                      userId: selectedUser.id,
+                      newPassword: newPassword.trim(),
+                    });
+                    setShowResetPasswordDialog(false);
+                    setNewPassword("");
+                  }}
+                  disabled={resetPasswordMutation.isPending || !newPassword.trim()}
+                >
+                  {resetPasswordMutation.isPending ? "Đang reset..." : "Reset mật khẩu"}
+                </Button>
+              </DialogFooter>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );
