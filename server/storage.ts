@@ -182,7 +182,7 @@ export class DatabaseStorage implements IStorage {
     const thanksRows = await db
       .select({
         userId: thanks.toId,
-        points: thanks.points,
+        points: sql<number>`1`, // Each thanks counts as 1 point
       })
       .from(thanks)
       .where(

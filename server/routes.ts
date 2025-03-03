@@ -444,6 +444,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }));
 
+  // Get recent approved thanks
+  app.get("/api/thanks/recent", asyncHandler(async (req, res) => {
+    const recentThanks = await storage.getRecentThanks();
+    res.json(recentThanks);
+  }));
+
   const httpServer = createServer(app);
   return httpServer;
 }
