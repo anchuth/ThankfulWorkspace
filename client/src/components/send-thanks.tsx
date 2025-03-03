@@ -15,13 +15,17 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -30,8 +34,9 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { insertThanksSchema, User } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Search } from "lucide-react";
+import { Check, ChevronsUpDown } from "lucide-react";
 import { useState } from "react";
+import { cn } from "@/lib/utils";
 
 const TEMPLATE_MESSAGES = [
   {
@@ -72,7 +77,7 @@ export function SendThanks() {
   const { user } = useAuth();
   const { toast } = useToast();
   const { data: users } = useQuery<User[]>({ queryKey: ["/api/users"] });
-  const [searchTerm, setSearchTerm] = useState("");
+  const [open, setOpen] = useState(false);
 
   const form = useForm({
     resolver: zodResolver(insertThanksSchema),
@@ -97,16 +102,7 @@ export function SendThanks() {
     },
   });
 
-  // Filter users based on search term
-  const filteredUsers = users?.filter((u) => {
-    if (!searchTerm) return true;
-    const searchLower = searchTerm.toLowerCase();
-    return (
-      u.name.toLowerCase().includes(searchLower) ||
-      u.username.toLowerCase().includes(searchLower) ||
-      (u.department && u.department.toLowerCase().includes(searchLower))
-    );
-  });
+  const filteredUsers = users?.filter((u) => u.id !== user!.id) || [];
 
   return (
     <Card>
@@ -122,55 +118,70 @@ export function SendThanks() {
             onSubmit={form.handleSubmit((data) => mutation.mutate(data))}
             className="space-y-4"
           >
-            <div className="space-y-4">
-              <Input
-                placeholder="Tìm kiếm theo tên, mã nhân viên hoặc bộ phận..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full"
-              />
-
-              <FormField
-                control={form.control}
-                name="toId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Người nhận</FormLabel>
-                    <Select
-                      onValueChange={(val) => field.onChange(parseInt(val))}
-                      value={field.value?.toString()}
-                    >
+            <FormField
+              control={form.control}
+              name="toId"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Người nhận</FormLabel>
+                  <Popover open={open} onOpenChange={setOpen}>
+                    <PopoverTrigger asChild>
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Chọn đồng nghiệp" />
-                        </SelectTrigger>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={open}
+                          className={cn(
+                            "w-full justify-between",
+                            !field.value && "text-muted-foreground"
+                          )}
+                        >
+                          {field.value
+                            ? filteredUsers.find((user) => user.id === field.value)?.name
+                            : "Chọn đồng nghiệp"}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
                       </FormControl>
-                      <SelectContent>
-                        {filteredUsers
-                          ?.filter((u) => u.id !== user!.id)
-                          .map((u) => (
-                            <SelectItem
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[400px] p-0">
+                      <Command>
+                        <CommandInput placeholder="Tìm kiếm theo tên, mã nhân viên hoặc bộ phận..." />
+                        <CommandEmpty>Không tìm thấy nhân viên nào</CommandEmpty>
+                        <CommandGroup className="max-h-[300px] overflow-auto">
+                          {filteredUsers.map((u) => (
+                            <CommandItem
+                              value={`${u.name} ${u.username} ${u.department || ''}`}
                               key={u.id}
-                              value={u.id.toString()}
-                              className="flex flex-col items-start py-2"
+                              onSelect={() => {
+                                form.setValue("toId", u.id);
+                                setOpen(false);
+                              }}
+                              className="cursor-pointer"
                             >
-                              <div className="font-medium">
-                                {u.name} ({u.username})
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  field.value === u.id ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              <div className="flex flex-col">
+                                <div>{u.name} ({u.username})</div>
+                                {u.department && (
+                                  <div className="text-xs text-muted-foreground">
+                                    {u.department}
+                                  </div>
+                                )}
                               </div>
-                              {u.department && (
-                                <div className="text-xs text-muted-foreground">
-                                  {u.department}
-                                </div>
-                              )}
-                            </SelectItem>
+                            </CommandItem>
                           ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+                        </CommandGroup>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}
@@ -179,22 +190,35 @@ export function SendThanks() {
                 <FormItem>
                   <FormLabel>Lời nhắn</FormLabel>
                   <div className="space-y-2">
-                    <Select
-                      onValueChange={(message) => form.setValue("message", message)}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Chọn lời cảm ơn mẫu" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {TEMPLATE_MESSAGES.map((template, index) => (
-                          <SelectItem key={index} value={template.message}>
-                            {template.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          type="button"
+                          className="w-full justify-start"
+                        >
+                          Chọn lời cảm ơn mẫu
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[400px] p-0">
+                        <Command>
+                          <CommandInput placeholder="Tìm kiếm mẫu..." />
+                          <CommandEmpty>Không tìm thấy mẫu phù hợp</CommandEmpty>
+                          <CommandGroup>
+                            {TEMPLATE_MESSAGES.map((template, index) => (
+                              <CommandItem
+                                key={index}
+                                onSelect={() => {
+                                  form.setValue("message", template.message);
+                                }}
+                              >
+                                {template.label}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                     <FormControl>
                       <Textarea
                         placeholder="Viết lời cảm ơn của bạn..."
