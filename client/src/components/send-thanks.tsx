@@ -34,16 +34,9 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { insertThanksSchema, User } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Check, ChevronsUpDown, Search } from "lucide-react";
+import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 const TEMPLATE_MESSAGES = [
   {
@@ -80,7 +73,13 @@ const TEMPLATE_MESSAGES = [
   }
 ];
 
-type SearchField = 'all' | 'name' | 'code' | 'department';
+// Helper function to remove diacritics from Vietnamese text
+function removeDiacritics(str: string) {
+  return str.normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[đĐ]/g, 'd')
+    .toLowerCase();
+}
 
 export function SendThanks() {
   const { user } = useAuth();
@@ -88,7 +87,6 @@ export function SendThanks() {
   const { data: users } = useQuery<User[]>({ queryKey: ["/api/users"] });
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [searchField, setSearchField] = useState<SearchField>('all');
 
   const form = useForm({
     resolver: zodResolver(insertThanksSchema),
@@ -113,27 +111,29 @@ export function SendThanks() {
     },
   });
 
-  // Filter users based on search term and selected field
+  // Filter and sort users based on search term
   const filteredUsers = users?.filter((u) => {
     if (!searchTerm.trim()) return true;
+    if (u.id === user?.id) return false;
 
-    const term = searchTerm.toLowerCase().trim();
+    const searchNormalized = removeDiacritics(searchTerm.trim());
+    const nameNormalized = removeDiacritics(u.name);
+    const usernameNormalized = removeDiacritics(u.username);
+    const departmentNormalized = u.department ? removeDiacritics(u.department) : '';
 
-    switch (searchField) {
-      case 'name':
-        return u.name.toLowerCase().includes(term);
-      case 'code':
-        return u.username.toLowerCase().includes(term);
-      case 'department':
-        return u.department?.toLowerCase().includes(term);
-      case 'all':
-      default:
-        return (
-          u.name.toLowerCase().includes(term) ||
-          u.username.toLowerCase().includes(term) ||
-          u.department?.toLowerCase().includes(term)
-        );
-    }
+    // Match each word in the search term
+    const searchWords = searchNormalized.split(/\s+/);
+    return searchWords.every(word => 
+      nameNormalized.includes(word) ||
+      usernameNormalized.includes(word) ||
+      departmentNormalized.includes(word)
+    );
+  }).sort((a, b) => {
+    // Sort by relevance - exact matches first
+    const searchLower = searchTerm.toLowerCase();
+    const aMatch = a.name.toLowerCase().includes(searchLower) ? 1 : 0;
+    const bMatch = b.name.toLowerCase().includes(searchLower) ? 1 : 0;
+    return bMatch - aMatch;
   });
 
   return (
@@ -177,65 +177,42 @@ export function SendThanks() {
                     </PopoverTrigger>
                     <PopoverContent className="w-full p-0">
                       <Command>
-                        <div className="flex items-center gap-2 p-2 border-b">
-                          <Search className="w-4 h-4 text-muted-foreground" />
-                          <CommandInput
-                            placeholder="Tìm kiếm..."
-                            value={searchTerm}
-                            onValueChange={setSearchTerm}
-                          />
-                          <Select 
-                            value={searchField}
-                            onValueChange={(value: SearchField) => setSearchField(value)}
-                          >
-                            <SelectTrigger className="w-[120px]">
-                              <SelectValue>
-                                {searchField === 'all' ? 'Tất cả' :
-                                 searchField === 'name' ? 'Tên' :
-                                 searchField === 'code' ? 'Mã số' : 'Bộ phận'}
-                              </SelectValue>
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">Tất cả</SelectItem>
-                              <SelectItem value="name">Tên</SelectItem>
-                              <SelectItem value="code">Mã số</SelectItem>
-                              <SelectItem value="department">Bộ phận</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
+                        <CommandInput
+                          placeholder="Nhập tên, mã số hoặc bộ phận..."
+                          value={searchTerm}
+                          onValueChange={setSearchTerm}
+                        />
                         <CommandEmpty>Không tìm thấy nhân viên</CommandEmpty>
                         <CommandGroup className="max-h-[300px] overflow-y-auto">
-                          {filteredUsers
-                            ?.filter((u) => u.id !== user!.id)
-                            .map((u) => (
-                              <CommandItem
-                                key={u.id}
-                                value={u.id.toString()}
-                                onSelect={() => {
-                                  form.setValue("toId", u.id);
-                                  setOpen(false);
-                                }}
-                              >
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-4 w-4",
-                                    field.value === u.id
-                                      ? "opacity-100"
-                                      : "opacity-0"
-                                  )}
-                                />
-                                <div className="flex flex-col">
-                                  <div className="font-medium">
-                                    {u.name} ({u.username})
-                                  </div>
-                                  {u.department && (
-                                    <div className="text-xs text-muted-foreground">
-                                      {u.department}
-                                    </div>
-                                  )}
+                          {filteredUsers?.map((u) => (
+                            <CommandItem
+                              key={u.id}
+                              value={u.id.toString()}
+                              onSelect={() => {
+                                form.setValue("toId", u.id);
+                                setOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  field.value === u.id
+                                    ? "opacity-100"
+                                    : "opacity-0"
+                                )}
+                              />
+                              <div className="flex flex-col">
+                                <div className="font-medium">
+                                  {u.name} ({u.username})
                                 </div>
-                              </CommandItem>
-                            ))}
+                                {u.department && (
+                                  <div className="text-xs text-muted-foreground">
+                                    {u.department}
+                                  </div>
+                                )}
+                              </div>
+                            </CommandItem>
+                          ))}
                         </CommandGroup>
                       </Command>
                     </PopoverContent>
