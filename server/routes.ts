@@ -2,8 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
-import { insertThanksSchema } from "@shared/schema";
-import { insertUserSchema } from "@shared/schema";
+import { insertThanksSchema, insertUserSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
@@ -215,7 +214,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
-      // Transform imported data to match our schema
+      const BATCH_SIZE = 100; // Process 100 users at a time
       const transformedUsers = users.map(user => ({
         username: user.username,
         password: Math.random().toString(36).slice(-8), // Generate random password
@@ -226,21 +225,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         email: user.email
       }));
 
-      // Validate each user
-      for (const user of transformedUsers) {
+      // Validate all users first
+      const validationErrors = [];
+      for (const [index, user] of transformedUsers.entries()) {
         const parsed = insertUserSchema.safeParse(user);
         if (!parsed.success) {
-          return res.status(400).json({
-            error: "Validation failed",
-            details: parsed.error,
-            user: user.username,
+          validationErrors.push({
+            row: index + 1,
+            username: user.username,
+            errors: parsed.error.errors.map(e => e.message)
           });
         }
       }
 
-      // Insert all users
-      const createdUsers = await storage.createManyUsers(transformedUsers);
-      res.json(createdUsers);
+      if (validationErrors.length > 0) {
+        return res.status(400).json({
+          error: "Validation failed",
+          details: validationErrors
+        });
+      }
+
+      // Process in batches
+      const results = [];
+      for (let i = 0; i < transformedUsers.length; i += BATCH_SIZE) {
+        const batch = transformedUsers.slice(i, i + BATCH_SIZE);
+        const createdUsers = await storage.createManyUsers(batch);
+        results.push(...createdUsers);
+      }
+
+      res.json({
+        success: true,
+        total: results.length,
+        users: results
+      });
     } catch (error) {
       console.error("Bulk import error:", error);
       res.status(500).send("Failed to import users");

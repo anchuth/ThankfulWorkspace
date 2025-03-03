@@ -39,6 +39,7 @@ import { useForm } from "react-hook-form";
 import { Search, Plus, Trash2, Download, Upload } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as XLSX from 'xlsx';
+import { Progress } from "@/components/ui/progress";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -169,15 +170,53 @@ export default function EmployeeManagementPage() {
   const importEmployeesMutation = useMutation({
     mutationFn: async (data: any[]) => {
       const res = await apiRequest("POST", "/api/users/bulk-import", data);
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(JSON.stringify(error));
+      }
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       setShowImportDialog(false);
+      setImportData([]);
       toast({
         title: "Import thành công",
-        description: "Đã thêm danh sách nhân viên mới vào hệ thống",
+        description: `Đã thêm ${data.total} nhân viên vào hệ thống`,
       });
+    },
+    onError: (error) => {
+      try {
+        const errorData = JSON.parse(error.message);
+        if (errorData.details) {
+          // Show validation errors
+          toast({
+            title: "Lỗi import",
+            description: (
+              <div className="mt-2 space-y-2">
+                <p>Có lỗi ở các dòng sau:</p>
+                <ul className="list-disc pl-4">
+                  {errorData.details.slice(0, 3).map((err: any) => (
+                    <li key={err.row}>
+                      Dòng {err.row} ({err.username}): {err.errors[0]}
+                    </li>
+                  ))}
+                  {errorData.details.length > 3 && (
+                    <li>...và {errorData.details.length - 3} lỗi khác</li>
+                  )}
+                </ul>
+              </div>
+            ),
+            variant: "destructive",
+          });
+        }
+      } catch {
+        toast({
+          title: "Lỗi import",
+          description: "Có lỗi xảy ra khi import nhân viên",
+          variant: "destructive",
+        });
+      }
     },
   });
 
@@ -260,12 +299,35 @@ export default function EmployeeManagementPage() {
 
     const reader = new FileReader();
     reader.onload = (evt) => {
-      const bstr = evt.target?.result;
-      const wb = XLSX.read(bstr, { type: "binary" });
-      const wsname = wb.SheetNames[0];
-      const ws = wb.Sheets[wsname];
-      const data = XLSX.utils.sheet_to_json(ws);
-      setImportData(data);
+      try {
+        const bstr = evt.target?.result;
+        const wb = XLSX.read(bstr, { type: "binary" });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const data = XLSX.utils.sheet_to_json(ws);
+
+        // Validate required columns
+        const requiredColumns = ['username', 'email', 'first_name', 'last_name', 'department', 'position'];
+        const firstRow = data[0] as any;
+        const missingColumns = requiredColumns.filter(col => !(col in firstRow));
+
+        if (missingColumns.length > 0) {
+          toast({
+            title: "Lỗi format file",
+            description: `File thiếu các cột: ${missingColumns.join(", ")}`,
+            variant: "destructive",
+          });
+          return;
+        }
+
+        setImportData(data);
+      } catch (error) {
+        toast({
+          title: "Lỗi đọc file",
+          description: "Không thể đọc file Excel. Vui lòng kiểm tra lại format file",
+          variant: "destructive",
+        });
+      }
     };
     reader.readAsBinaryString(file);
   };
@@ -408,7 +470,7 @@ export default function EmployeeManagementPage() {
                   Import nhân viên
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl">
+              <DialogContent className="max-w-4xl">
                 <DialogHeader>
                   <DialogTitle>Import danh sách nhân viên</DialogTitle>
                   <DialogDescription>
@@ -430,7 +492,12 @@ export default function EmployeeManagementPage() {
 
                   {importData.length > 0 && (
                     <>
-                      <div className="border rounded-md">
+                      <div className="rounded-md border">
+                        <div className="p-4 bg-muted">
+                          <p className="text-sm font-medium">
+                            Tổng số nhân viên: {importData.length}
+                          </p>
+                        </div>
                         <Table>
                           <TableHeader>
                             <TableRow>
@@ -443,7 +510,7 @@ export default function EmployeeManagementPage() {
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {importData.map((item, index) => (
+                            {importData.slice(0, 5).map((item, index) => (
                               <TableRow key={index}>
                                 <TableCell>{item.username}</TableCell>
                                 <TableCell>{item.email}</TableCell>
@@ -455,13 +522,22 @@ export default function EmployeeManagementPage() {
                             ))}
                           </TableBody>
                         </Table>
+                        {importData.length > 5 && (
+                          <div className="p-4 border-t">
+                            <p className="text-sm text-muted-foreground">
+                              ... và {importData.length - 5} nhân viên khác
+                            </p>
+                          </div>
+                        )}
                       </div>
                       <DialogFooter>
                         <Button
                           onClick={() => importEmployeesMutation.mutate(importData)}
                           disabled={importEmployeesMutation.isPending}
                         >
-                          {importEmployeesMutation.isPending ? "Đang import..." : "Import"}
+                          {importEmployeesMutation.isPending
+                            ? "Đang import..."
+                            : `Import ${importData.length} nhân viên`}
                         </Button>
                       </DialogFooter>
                     </>
