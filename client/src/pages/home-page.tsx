@@ -6,9 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { formatDistance } from "date-fns";
 import { Button } from "@/components/ui/button";
-import { LogIn, MessageSquare, Trophy, Award, Users, ChartBar, Star, Heart, ArrowRight } from "lucide-react";
+import { LogIn, MessageSquare, Trophy, Award, Users, ChartBar, Star, Heart, ArrowRight, ChevronDown, ChevronUp } from "lucide-react";
 import { Link } from "wouter";
 import { vi } from "date-fns/locale";
+import { useState } from "react";
 
 function formatUserName(user?: User) {
   if (!user) return "N/A";
@@ -18,6 +19,73 @@ function formatUserName(user?: User) {
 function truncateMessage(message: string, maxLength: number = 100) {
   if (message.length <= maxLength) return message;
   return message.substring(0, maxLength) + "...";
+}
+
+function ThanksCard({ thanks, users }: { thanks: Thanks; users?: User[] }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const fromUser = users?.find(u => u.id === thanks.fromId);
+  const toUser = users?.find(u => u.id === thanks.toId);
+
+  const isLongMessage = thanks.message.length > 150;
+  const displayMessage = isExpanded ? thanks.message : 
+    isLongMessage ? `${thanks.message.slice(0, 150)}...` : thanks.message;
+
+  return (
+    <div className="rounded-xl bg-muted/50 p-4 transition-all hover:scale-[1.02] hover:bg-muted/70 space-y-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <MessageSquare className="w-4 h-4 text-primary" />
+            <div className="absolute -inset-1 bg-primary/20 rounded-full blur opacity-0 group-hover:opacity-100 transition-opacity" />
+          </div>
+          <div>
+            <p className="text-sm font-medium">
+              {formatUserName(fromUser)} → {formatUserName(toUser)}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {formatDistance(new Date(thanks.createdAt), new Date(), {
+                addSuffix: true,
+                locale: vi,
+              })}
+            </p>
+          </div>
+        </div>
+        <Badge 
+          variant="outline" 
+          className="text-xs bg-primary/5 hover:bg-primary/10 transition-colors"
+        >
+          Đã duyệt
+        </Badge>
+      </div>
+
+      <div className="prose prose-sm max-w-none text-muted-foreground">
+        <p className={`transition-all duration-300 ${isExpanded ? 'line-clamp-none' : 'line-clamp-3'}`}>
+          {displayMessage}
+        </p>
+      </div>
+
+      {isLongMessage && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full mt-2 text-primary/80 hover:text-primary transition-colors"
+          onClick={() => setIsExpanded(!isExpanded)}
+        >
+          {isExpanded ? (
+            <>
+              <ChevronUp className="w-4 h-4 mr-1" />
+              Thu gọn
+            </>
+          ) : (
+            <>
+              <ChevronDown className="w-4 h-4 mr-1" />
+              Xem thêm
+            </>
+          )}
+        </Button>
+      )}
+    </div>
+  );
 }
 
 export default function HomePage() {
@@ -147,28 +215,8 @@ export default function HomePage() {
                     <CardContent>
                       <div className="space-y-4">
                         {recentThanks?.slice(0, 5).map((thanks) => {
-                          const fromUser = users?.find(u => u.id === thanks.fromId);
-                          const toUser = users?.find(u => u.id === thanks.toId);
                           return (
-                            <div key={thanks.id} className="rounded-xl bg-muted/50 p-4 transition-all hover:scale-[1.02] hover:bg-muted/70">
-                              <div className="flex items-center justify-between mb-2">
-                                <div className="flex items-center gap-2">
-                                  <MessageSquare className="w-4 h-4 text-primary" />
-                                  <p className="text-sm font-medium">
-                                    {formatUserName(fromUser)} → {formatUserName(toUser)}
-                                  </p>
-                                </div>
-                                <Badge variant="secondary" className="text-xs">
-                                  {formatDistance(new Date(thanks.createdAt), new Date(), {
-                                    addSuffix: true,
-                                    locale: vi,
-                                  })}
-                                </Badge>
-                              </div>
-                              <p className="text-sm text-muted-foreground">
-                                {truncateMessage(thanks.message)}
-                              </p>
-                            </div>
+                            <ThanksCard key={thanks.id} thanks={thanks} users={users} />
                           );
                         })}
                         {(!recentThanks || recentThanks.length === 0) && (
