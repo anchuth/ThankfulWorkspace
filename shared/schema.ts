@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
@@ -23,6 +23,7 @@ export const thanks = pgTable("thanks", {
   status: text("status", { enum: ["pending", "approved", "rejected"] }).notNull().default("pending"),
   approvedAt: timestamp("approved_at"),
   points: integer("points").notNull().default(1),
+  rejectReason: text("reject_reason"),
 });
 
 // Relations

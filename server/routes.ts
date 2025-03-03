@@ -77,16 +77,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Approve/reject thanks
   app.post("/api/thanks/:id/:action", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    if (req.user!.role !== "manager") return res.sendStatus(403);
+    if (req.user!.role !== "manager" && req.user!.role !== "admin") return res.sendStatus(403);
 
     const { id, action } = req.params;
+    const { reason } = req.body;
+
     if (action !== "approve" && action !== "reject") {
       return res.status(400).send("Invalid action");
     }
 
+    if (action === "reject" && !reason) {
+      return res.status(400).send("Reject reason is required");
+    }
+
     const thanks = await storage.updateThanksStatus(
       parseInt(id),
-      action === "approve" ? "approved" : "rejected"
+      action === "approve" ? "approved" : "rejected",
+      reason
     );
     res.json(thanks);
   });

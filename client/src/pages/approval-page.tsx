@@ -17,12 +17,21 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistance } from "date-fns";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
 import { Redirect } from "wouter";
 
@@ -32,6 +41,9 @@ export default function ApprovalPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [filter, setFilter] = useState<ThanksStatus>("all");
+  const [selectedThanks, setSelectedThanks] = useState<Thanks | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
 
   // Redirect if not manager/admin
   if (user?.role !== "manager" && user?.role !== "admin") {
@@ -50,11 +62,13 @@ export default function ApprovalPage() {
     mutationFn: async ({
       thanksId,
       action,
+      reason,
     }: {
       thanksId: number;
       action: "approve" | "reject";
+      reason?: string;
     }) => {
-      const res = await apiRequest("POST", `/api/thanks/${thanksId}/${action}`);
+      const res = await apiRequest("POST", `/api/thanks/${thanksId}/${action}`, { reason });
       return res.json();
     },
     onSuccess: () => {
@@ -63,8 +77,25 @@ export default function ApprovalPage() {
         title: "Cập nhật thành công",
         description: "Lời cảm ơn đã được xử lý",
       });
+      setRejectDialogOpen(false);
+      setSelectedThanks(null);
+      setRejectReason("");
     },
   });
+
+  const handleReject = (thanks: Thanks) => {
+    setSelectedThanks(thanks);
+    setRejectDialogOpen(true);
+  };
+
+  const confirmReject = () => {
+    if (!selectedThanks || !rejectReason.trim()) return;
+    updateMutation.mutate({
+      thanksId: selectedThanks.id,
+      action: "reject",
+      reason: rejectReason,
+    });
+  };
 
   const filteredThanks = thanks?.filter((t) => {
     if (filter === "all") return true;
@@ -134,6 +165,11 @@ export default function ApprovalPage() {
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm mb-4">{thanks.message}</p>
+                  {thanks.status === "rejected" && thanks.rejectReason && (
+                    <p className="text-sm text-destructive mb-4">
+                      Lý do từ chối: {thanks.rejectReason}
+                    </p>
+                  )}
                   {thanks.status === "pending" && (
                     <div className="flex gap-2">
                       <Button
@@ -153,12 +189,7 @@ export default function ApprovalPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() =>
-                          updateMutation.mutate({
-                            thanksId: thanks.id,
-                            action: "reject",
-                          })
-                        }
+                        onClick={() => handleReject(thanks)}
                         disabled={updateMutation.isPending}
                       >
                         <X className="h-4 w-4 mr-1" />
@@ -179,6 +210,40 @@ export default function ApprovalPage() {
           )}
         </div>
       </div>
+
+      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Từ chối lời cảm ơn</DialogTitle>
+            <DialogDescription>
+              Vui lòng nhập lý do từ chối để người gửi hiểu được vấn đề
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Textarea
+              placeholder="Nhập lý do từ chối..."
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              className="min-h-[100px]"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setRejectDialogOpen(false)}
+              disabled={updateMutation.isPending}
+            >
+              Hủy
+            </Button>
+            <Button
+              onClick={confirmReject}
+              disabled={!rejectReason.trim() || updateMutation.isPending}
+            >
+              Xác nhận
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 }
