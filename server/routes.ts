@@ -45,6 +45,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(user);
   });
 
+  // Update user's role (admin only)
+  app.patch("/api/users/:userId/role", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (req.user!.role !== "admin") return res.sendStatus(403);
+
+    const userId = parseInt(req.params.userId);
+    const { role } = req.body;
+
+    // Validate role
+    if (!["employee", "manager"].includes(role)) {
+      return res.status(400).send("Invalid role");
+    }
+
+    const user = await storage.updateUserRole(userId, role);
+    res.json(user);
+  });
+
+
   // Send thanks
   app.post("/api/thanks", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
