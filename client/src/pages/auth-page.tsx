@@ -5,45 +5,68 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/use-auth";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { insertUserSchema, InsertUser } from "@shared/schema";
 import { Redirect } from "wouter";
 import { Award } from "lucide-react";
 
 export default function AuthPage() {
-  const { user, loginMutation, registerMutation } = useAuth();
+  const { user, loginMutation } = useAuth();
 
   if (user) {
     return <Redirect to="/" />;
   }
+
+  const form = useForm({
+    defaultValues: {
+      username: "",
+      password: "",
+    },
+  });
 
   return (
     <div className="min-h-screen flex">
       <div className="flex-1 p-8 flex items-center justify-center">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle>Welcome</CardTitle>
-            <CardDescription>Sign in or create a new account</CardDescription>
+            <CardTitle>Đăng nhập</CardTitle>
+            <CardDescription>Đăng nhập để sử dụng đầy đủ tính năng</CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="login">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="login">Login</TabsTrigger>
-                <TabsTrigger value="register">Register</TabsTrigger>
-              </TabsList>
-              <TabsContent value="login">
-                <LoginForm />
-              </TabsContent>
-              <TabsContent value="register">
-                <RegisterForm />
-              </TabsContent>
-            </Tabs>
+            <form
+              onSubmit={form.handleSubmit((data) => loginMutation.mutate(data))}
+              className="space-y-4"
+            >
+              <div className="space-y-2">
+                <Label htmlFor="username">Mã số nhân viên</Label>
+                <Input
+                  id="username"
+                  {...form.register("username")}
+                  required
+                  disabled={loginMutation.isPending}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Mật khẩu</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  {...form.register("password")}
+                  required
+                  disabled={loginMutation.isPending}
+                />
+              </div>
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={loginMutation.isPending}
+              >
+                {loginMutation.isPending ? "Đang đăng nhập..." : "Đăng nhập"}
+              </Button>
+            </form>
           </CardContent>
         </Card>
       </div>
@@ -58,104 +81,5 @@ export default function AuthPage() {
         </div>
       </div>
     </div>
-  );
-}
-
-function LoginForm() {
-  const { loginMutation } = useAuth();
-  const form = useForm({
-    defaultValues: {
-      username: "",
-      password: "",
-    },
-  });
-
-  return (
-    <form
-      onSubmit={form.handleSubmit((data) => loginMutation.mutate(data))}
-      className="space-y-4 mt-4"
-    >
-      <div className="space-y-2">
-        <Label htmlFor="username">Employee ID</Label>
-        <Input
-          id="username"
-          {...form.register("username")}
-          required
-          disabled={loginMutation.isPending}
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="password">Password</Label>
-        <Input
-          id="password"
-          type="password"
-          {...form.register("password")}
-          required
-          disabled={loginMutation.isPending}
-        />
-      </div>
-      <Button
-        type="submit"
-        className="w-full"
-        disabled={loginMutation.isPending}
-      >
-        {loginMutation.isPending ? "Signing in..." : "Sign In"}
-      </Button>
-    </form>
-  );
-}
-
-function RegisterForm() {
-  const { registerMutation } = useAuth();
-  const form = useForm({
-    resolver: zodResolver(insertUserSchema),
-    defaultValues: {
-      username: "",
-      password: "",
-      name: "",
-    },
-  });
-
-  return (
-    <form
-      onSubmit={form.handleSubmit((data) => registerMutation.mutate(data))}
-      className="space-y-4 mt-4"
-    >
-      <div className="space-y-2">
-        <Label htmlFor="reg-username">Employee ID</Label>
-        <Input
-          id="reg-username"
-          {...form.register("username")}
-          required
-          disabled={registerMutation.isPending}
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="name">Full Name</Label>
-        <Input
-          id="name"
-          {...form.register("name")}
-          required
-          disabled={registerMutation.isPending}
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="reg-password">Password</Label>
-        <Input
-          id="reg-password"
-          type="password"
-          {...form.register("password")}
-          required
-          disabled={registerMutation.isPending}
-        />
-      </div>
-      <Button
-        type="submit"
-        className="w-full"
-        disabled={registerMutation.isPending}
-      >
-        {registerMutation.isPending ? "Creating Account..." : "Create Account"}
-      </Button>
-    </form>
   );
 }
