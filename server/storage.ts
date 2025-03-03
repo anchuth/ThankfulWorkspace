@@ -322,7 +322,10 @@ export class DatabaseStorage implements IStorage {
   async deleteManyUsers(userIds: number[]): Promise<void> {
     try {
       // Validate that all IDs are numbers and get valid IDs
-      const validIds = userIds.filter(id => typeof id === 'number' && Number.isInteger(id));
+      const validIds = userIds.filter(id => {
+        const numId = Number(id);
+        return !isNaN(numId) && Number.isInteger(numId) && numId > 0;
+      });
 
       if (validIds.length === 0) {
         console.log("No valid IDs to delete");
@@ -353,10 +356,9 @@ export class DatabaseStorage implements IStorage {
         console.log("Deleting users with IDs:", validIds);
         const result = await tx
           .delete(users)
-          .where(inArray(users.id, validIds))
-          .returning();
+          .where(inArray(users.id, validIds));
 
-        console.log("Deleted users:", result);
+        console.log("Delete operation completed");
       });
     } catch (error) {
       console.error("Transaction error while deleting users:", error);
