@@ -117,6 +117,11 @@ export function setupAuth(app: Express) {
     }
   });
 
+  // Add a simple ping endpoint to verify server is responding
+  app.get("/api/ping", (req, res) => {
+    res.json({ message: "Server is running" });
+  });
+
   app.post("/api/register", async (req, res, next) => {
     try {
       const existingUser = await storage.getUserByUsername(req.body.username);

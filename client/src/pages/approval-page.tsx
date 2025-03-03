@@ -1,6 +1,6 @@
 import { Layout } from "@/components/layout";
 import { useAuth } from "@/hooks/use-auth";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Thanks, User } from "@shared/schema";
 import {
   Card,
@@ -12,7 +12,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Check, X } from "lucide-react";
-import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistance } from "date-fns";
@@ -50,7 +49,7 @@ export default function ApprovalPage() {
     return <Redirect to="/" />;
   }
 
-  const { data: thanks } = useQuery<Thanks[]>({
+  const { data: thanks, isLoading } = useQuery<Thanks[]>({
     queryKey: ["/api/approvals"],
   });
 
@@ -69,17 +68,28 @@ export default function ApprovalPage() {
       reason?: string;
     }) => {
       const res = await apiRequest("POST", `/api/thanks/${thanksId}/${action}`, { reason });
+      if (!res.ok) {
+        const error = await res.text();
+        throw new Error(error);
+      }
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/approvals"] });
       toast({
-        title: "Cập nhật thành công",
+        title: "Thành công",
         description: "Lời cảm ơn đã được xử lý",
       });
       setRejectDialogOpen(false);
       setSelectedThanks(null);
       setRejectReason("");
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Lỗi",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -97,10 +107,21 @@ export default function ApprovalPage() {
     });
   };
 
+  // Filter thanks based on status
   const filteredThanks = thanks?.filter((t) => {
     if (filter === "all") return true;
     return t.status === filter;
   });
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center min-h-screen">
+          <span className="loading loading-spinner loading-lg"></span>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
@@ -181,8 +202,6 @@ export default function ApprovalPage() {
                   {thanks.status === "pending" && (
                     <div className="flex gap-2">
                       <Button
-                        variant="outline"
-                        size="sm"
                         onClick={() =>
                           updateMutation.mutate({
                             thanksId: thanks.id,
@@ -196,7 +215,6 @@ export default function ApprovalPage() {
                       </Button>
                       <Button
                         variant="outline"
-                        size="sm"
                         onClick={() => handleReject(thanks)}
                         disabled={updateMutation.isPending}
                       >
