@@ -73,7 +73,6 @@ export function SendThanks() {
   const { toast } = useToast();
   const { data: users } = useQuery<User[]>({ queryKey: ["/api/users"] });
   const [searchTerm, setSearchTerm] = useState("");
-  const [isSearching, setIsSearching] = useState(false);
 
   const form = useForm({
     resolver: zodResolver(insertThanksSchema),
@@ -100,7 +99,7 @@ export function SendThanks() {
 
   // Filter users based on search term
   const filteredUsers = users?.filter((u) => {
-    if (!searchTerm || !isSearching) return true;
+    if (!searchTerm) return true;
     const searchLower = searchTerm.toLowerCase();
     return (
       u.name.toLowerCase().includes(searchLower) ||
@@ -123,43 +122,30 @@ export function SendThanks() {
             onSubmit={form.handleSubmit((data) => mutation.mutate(data))}
             className="space-y-4"
           >
-            <FormField
-              control={form.control}
-              name="toId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Người nhận</FormLabel>
-                  <Select
-                    onValueChange={(val) => field.onChange(parseInt(val))}
-                    value={field.value?.toString()}
-                    onOpenChange={(open) => {
-                      if (!open) {
-                        setSearchTerm("");
-                        setIsSearching(false);
-                      }
-                    }}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Chọn đồng nghiệp" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <div className="flex items-center gap-2 px-3 pb-2">
-                        <Search className="w-4 h-4 text-muted-foreground" />
-                        <Input
-                          placeholder="Tìm kiếm theo tên, mã nhân viên hoặc bộ phận..."
-                          value={searchTerm}
-                          onChange={(e) => {
-                            setSearchTerm(e.target.value);
-                            setIsSearching(true);
-                          }}
-                          onClick={(e) => e.stopPropagation()}
-                          autoComplete="off"
-                          className="h-8"
-                        />
-                      </div>
-                      <div className="max-h-[300px] overflow-y-auto">
+            <div className="space-y-4">
+              <Input
+                placeholder="Tìm kiếm theo tên, mã nhân viên hoặc bộ phận..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full"
+              />
+
+              <FormField
+                control={form.control}
+                name="toId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Người nhận</FormLabel>
+                    <Select
+                      onValueChange={(val) => field.onChange(parseInt(val))}
+                      value={field.value?.toString()}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Chọn đồng nghiệp" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
                         {filteredUsers
                           ?.filter((u) => u.id !== user!.id)
                           .map((u) => (
@@ -178,13 +164,13 @@ export function SendThanks() {
                               )}
                             </SelectItem>
                           ))}
-                      </div>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <FormField
               control={form.control}
