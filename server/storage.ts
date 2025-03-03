@@ -22,6 +22,7 @@ export interface IStorage {
   getSentThanksForUser(userId: number): Promise<Thanks[]>;
   getRankings(period: "week" | "month" | "quarter" | "year"): Promise<{userId: number, points: number}[]>;
   sessionStore: session.Store;
+  updateUserPassword(userId: number, newPassword: string): Promise<User>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -172,6 +173,14 @@ export class DatabaseStorage implements IStorage {
     return Array.from(pointsMap.entries())
       .map(([userId, points]) => ({ userId, points }))
       .sort((a, b) => b.points - a.points);
+  }
+  async updateUserPassword(userId: number, newPassword: string): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({ password: newPassword })
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
   }
 }
 
