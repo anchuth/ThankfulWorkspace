@@ -390,12 +390,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).send("Không có nhân viên nào để xóa");
       }
 
-      // Get list of valid IDs
+      // Get list of valid IDs and execute deletion
       const userIds = nonAdminUsers.map(u => u.id);
-
       console.log("Processing deletion for users:", userIds);
 
-      // Execute deletion
       await storage.deleteManyUsers(userIds);
 
       res.json({

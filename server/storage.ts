@@ -322,7 +322,7 @@ export class DatabaseStorage implements IStorage {
   async deleteManyUsers(userIds: number[]): Promise<void> {
     try {
       // Validate that all IDs are numbers and get valid IDs
-      const validIds = userIds.filter(id => typeof id === 'number' && !isNaN(id));
+      const validIds = userIds.filter(id => typeof id === 'number' && Number.isInteger(id));
 
       if (validIds.length === 0) {
         console.log("No valid IDs to delete");
