@@ -29,7 +29,13 @@ import { Label } from "@/components/ui/label";
 import { Search, Edit2, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Redirect } from "wouter";
-import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from '@radix-ui/react-select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -243,7 +249,7 @@ export default function ThanksManagementPage() {
                     )
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Chọn người gửi" />
                   </SelectTrigger>
                   <SelectContent>
@@ -266,7 +272,7 @@ export default function ThanksManagementPage() {
                     )
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Chọn người nhận" />
                   </SelectTrigger>
                   <SelectContent>
@@ -306,7 +312,7 @@ export default function ThanksManagementPage() {
                     )
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Chọn trạng thái" />
                   </SelectTrigger>
                   <SelectContent>
