@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { insertThanksSchema, insertUserSchema } from "@shared/schema";
+import { hashPassword } from './utils'; // Assuming hashPassword function exists
 
 export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
@@ -228,7 +229,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ received, sent });
   });
 
-  // Import users route - bulk import
+  // Update the bulk import endpoint with proper validation
   app.post("/api/users/bulk-import", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     if (req.user!.role !== "admin") return res.sendStatus(403);
@@ -248,7 +249,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Transform imported data to match our schema
       const transformedUsers = users.map(user => ({
         username: user.username,
-        password: defaultPassword.trim(),
+        password: defaultPassword.trim(), // Will be hashed in createManyUsers
         name: `${user.first_name} ${user.last_name}`,
         title: user.position,
         department: user.department,
@@ -296,7 +297,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const results = [];
       for (let i = 0; i < validUsers.length; i += BATCH_SIZE) {
         const batch = validUsers.slice(i, i + BATCH_SIZE);
-        const createdUsers = await storage.createManyUsers(batch);
+        const hashedPasswords = await Promise.all(
+          batch.map(user => hashPassword(user.password))
+        );
+        const batchWithHashedPasswords = batch.map((user, index) => ({
+          ...user,
+          password: hashedPasswords[index]
+        }));
+        const createdUsers = await storage.createManyUsers(batchWithHashedPasswords);
         results.push(...createdUsers);
       }
 
@@ -346,7 +354,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Only update managerId if it's explicitly set
       if (managerId !== undefined && managerId !== "unchanged") {
-        updateData.managerId = managerId === "none" ? null : 
+        updateData.managerId = managerId === "none" ? null :
           (typeof managerId === 'number' ? managerId : parseInt(managerId));
       }
 

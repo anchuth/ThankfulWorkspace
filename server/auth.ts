@@ -23,6 +23,10 @@ async function hashPassword(password: string) {
 
 async function comparePasswords(supplied: string, stored: string) {
   try {
+    console.log('Comparing passwords...');
+    console.log('Supplied password length:', supplied.length);
+    console.log('Stored password format:', stored);
+
     // Check if stored password has the correct format
     if (!stored || !stored.includes('.')) {
       console.error('Invalid stored password format');
@@ -34,12 +38,21 @@ async function comparePasswords(supplied: string, stored: string) {
     // Validate both hashed and salt exist
     if (!hashed || !salt) {
       console.error('Invalid stored password components');
+      console.error('Hashed:', hashed);
+      console.error('Salt:', salt);
       return false;
     }
 
+    console.log('Found valid hash and salt');
+    console.log('Hash length:', hashed.length);
+    console.log('Salt length:', salt.length);
+
     const hashedBuf = Buffer.from(hashed, "hex");
     const suppliedBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
-    return timingSafeEqual(hashedBuf, suppliedBuf);
+    const result = timingSafeEqual(hashedBuf, suppliedBuf);
+
+    console.log('Password comparison result:', result);
+    return result;
   } catch (error) {
     console.error('Error comparing passwords:', error);
     return false;
@@ -71,16 +84,21 @@ export function setupAuth(app: Express) {
       try {
         const user = await storage.getUserByUsername(username);
         if (!user) {
+          console.log('User not found:', username);
           return done(null, false, { message: "Incorrect username." });
         }
 
+        console.log('Comparing passwords for user:', username);
         const isValid = await comparePasswords(password, user.password);
+        console.log('Password comparison result:', isValid);
+
         if (!isValid) {
           return done(null, false, { message: "Incorrect password." });
         }
 
         return done(null, user);
       } catch (err) {
+        console.error('Authentication error:', err);
         return done(err);
       }
     }),
