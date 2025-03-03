@@ -338,8 +338,8 @@ function EmployeeManagementPage() {
       updateData.department = data.department.trim();
     }
 
-    if (data.managerId && data.managerId !== "unchanged") {
-      updateData.managerId = data.managerId === "none" ? null : parseInt(data.managerId);
+    if (data.managerId !== "unchanged") {
+      updateData.managerId = data.managerId === "none" ? null : parseInt(data.managerId, 10);
     }
 
     bulkUpdateMutation.mutate(updateData);
@@ -932,8 +932,7 @@ function EmployeeManagementPage() {
             </Select>
             <Label>dòng mỗi trang</Label>
           </div>
-          <div className="text-sm text-muted-foreground">
-            Trang {currentPage}/{totalPages} ({totalFilteredItems} nhân viên)
+          <div className="text-sm text-muted-foreground">Trang {currentPage}/{totalPages} ({totalFilteredItems} nhân viên)
           </div>
         </div>
 
