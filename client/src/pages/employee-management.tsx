@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -36,12 +37,11 @@ import { Redirect } from "wouter";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useForm } from "react-hook-form";
-import { Search, Plus, Trash2, Download, Upload } from "lucide-react";
+import { Search, Plus, Trash2, Download, Upload, Settings } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as XLSX from 'xlsx';
 import { Progress } from "@/components/ui/progress";
 import { z } from "zod";
-
 
 export default function EmployeeManagementPage() {
   const { user } = useAuth();
@@ -51,11 +51,23 @@ export default function EmployeeManagementPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterRole, setFilterRole] = useState<string>("all");
   const [filterDepartment, setFilterDepartment] = useState<string>("all");
+  const [filterManager, setFilterManager] = useState<string>("all");
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
+  const [showBulkUpdateDialog, setShowBulkUpdateDialog] = useState(false);
   const [importData, setImportData] = useState<any[]>([]);
   const [defaultPassword, setDefaultPassword] = useState("");
   const [pageSize, setPageSize] = useState(20);
+  const [selectedEmployees, setSelectedEmployees] = useState<number[]>([]);
+
+  // Form for bulk update
+  const bulkUpdateForm = useForm({
+    defaultValues: {
+      title: "",
+      department: "",
+      managerId: "",
+    },
+  });
 
   const form = useForm({
     defaultValues: {
@@ -255,6 +267,27 @@ export default function EmployeeManagementPage() {
     },
   });
 
+  // Mutation for bulk update
+  const bulkUpdateMutation = useMutation({
+    mutationFn: async (data: {
+      employeeIds: number[];
+      title?: string;
+      department?: string;
+      managerId?: string;
+    }) => {
+      const res = await apiRequest("PATCH", "/api/users/bulk-update", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      setShowBulkUpdateDialog(false);
+      setSelectedEmployees([]);
+      toast({
+        title: "Cập nhật thành công",
+        description: "Đã cập nhật thông tin cho các nhân viên đã chọn",
+      });
+    },
+  });
 
   // Redirect if not manager/admin
   if (user?.role !== "manager" && user?.role !== "admin") {
@@ -287,12 +320,15 @@ export default function EmployeeManagementPage() {
     addEmployeeMutation.mutate(data);
   };
 
-  // Filter and paginate employees
+  // Filter employees
   const filteredEmployees = employees?.filter(employee => {
     const matchesSearch =
       searchTerm === "" ||
       employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employee.username.toLowerCase().includes(searchTerm.toLowerCase());
+      employee.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      employee.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      employee.department?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      employee.title?.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesRole =
       filterRole === "all" || employee.role === filterRole;
@@ -300,7 +336,10 @@ export default function EmployeeManagementPage() {
     const matchesDepartment =
       filterDepartment === "all" || employee.department === filterDepartment;
 
-    return matchesSearch && matchesRole && matchesDepartment;
+    const matchesManager =
+      filterManager === "all" || employee.managerId?.toString() === filterManager;
+
+    return matchesSearch && matchesRole && matchesDepartment && matchesManager;
   });
 
   const totalFilteredItems = filteredEmployees?.length || 0;
@@ -370,6 +409,34 @@ export default function EmployeeManagementPage() {
     reader.readAsBinaryString(file);
   };
 
+  // Handle select all in current page
+  const handleSelectAllInPage = (checked: boolean) => {
+    if (checked) {
+      const pageEmployees = paginatedEmployees?.map(e => e.id) || [];
+      setSelectedEmployees(prev =>
+        [...new Set([...prev, ...pageEmployees])]
+      );
+    } else {
+      const pageEmployees = new Set(paginatedEmployees?.map(e => e.id));
+      setSelectedEmployees(prev =>
+        prev.filter(id => !pageEmployees.has(id))
+      );
+    }
+  };
+
+  // Handle bulk update submit
+  const onBulkUpdateSubmit = (data: any) => {
+    const updateData: any = {
+      employeeIds: selectedEmployees,
+    };
+
+    if (data.title) updateData.title = data.title;
+    if (data.department) updateData.department = data.department;
+    if (data.managerId) updateData.managerId = data.managerId === "none" ? null : parseInt(data.managerId);
+
+    bulkUpdateMutation.mutate(updateData);
+  };
+
   return (
     <Layout>
       <div className="space-y-8">
@@ -382,12 +449,12 @@ export default function EmployeeManagementPage() {
           </p>
         </div>
 
-        {/* Thanh công cụ */}
+        {/* Toolbar with filters */}
         <div className="flex items-center gap-4 flex-wrap">
           <div className="flex-1 flex items-center gap-2">
             <Search className="w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="Tìm kiếm theo tên hoặc mã số..."
+              placeholder="Tìm kiếm theo tên, mã số, email, chức danh..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="max-w-xs"
@@ -419,6 +486,77 @@ export default function EmployeeManagementPage() {
               ))}
             </SelectContent>
           </Select>
+
+          {user?.role === "admin" && (
+            <Select value={filterManager} onValueChange={setFilterManager}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Lọc theo quản lý" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả quản lý</SelectItem>
+                <SelectItem value="none">Không có quản lý</SelectItem>
+                {managers?.map((manager) => (
+                  <SelectItem key={manager.id} value={manager.id.toString()}>
+                    {manager.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
+          {selectedEmployees.length > 0 && (
+            <Dialog open={showBulkUpdateDialog} onOpenChange={setShowBulkUpdateDialog}>
+              <DialogTrigger asChild>
+                <Button variant="outline">
+                  <Settings className="w-4 h-4 mr-2" />
+                  Cập nhật {selectedEmployees.length} nhân viên
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Cập nhật thông tin hàng loạt</DialogTitle>
+                  <DialogDescription>
+                    Cập nhật thông tin cho {selectedEmployees.length} nhân viên đã chọn
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={bulkUpdateForm.handleSubmit(onBulkUpdateSubmit)} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Chức danh (để trống nếu không thay đổi)</Label>
+                    <Input {...bulkUpdateForm.register("title")} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Bộ phận (để trống nếu không thay đổi)</Label>
+                    <Input {...bulkUpdateForm.register("department")} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Quản lý trực tiếp (để trống nếu không thay đổi)</Label>
+                    <Select
+                      value={bulkUpdateForm.watch("managerId")}
+                      onValueChange={(value) => bulkUpdateForm.setValue("managerId", value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Chọn quản lý" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Không thay đổi</SelectItem>
+                        <SelectItem value="none">Xóa quản lý</SelectItem>
+                        {managers?.map((manager) => (
+                          <SelectItem key={manager.id} value={manager.id.toString()}>
+                            {manager.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <DialogFooter>
+                    <Button type="submit" disabled={bulkUpdateMutation.isPending}>
+                      {bulkUpdateMutation.isPending ? "Đang cập nhật..." : "Cập nhật"}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+          )}
 
           {user?.role === "admin" && (
             <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
@@ -617,10 +755,20 @@ export default function EmployeeManagementPage() {
           )}
         </div>
 
+        {/* Employee table */}
         <div className="rounded-md border">
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-[50px]">
+                  <Checkbox
+                    checked={
+                      paginatedEmployees?.length > 0 &&
+                      paginatedEmployees?.every(e => selectedEmployees.includes(e.id))
+                    }
+                    onCheckedChange={handleSelectAllInPage}
+                  />
+                </TableHead>
                 <TableHead>Mã số</TableHead>
                 <TableHead>Tên nhân viên</TableHead>
                 <TableHead>Email</TableHead>
@@ -634,6 +782,18 @@ export default function EmployeeManagementPage() {
             <TableBody>
               {paginatedEmployees?.map((employee) => (
                 <TableRow key={employee.id}>
+                  <TableCell>
+                    <Checkbox
+                      checked={selectedEmployees.includes(employee.id)}
+                      onCheckedChange={(checked) => {
+                        setSelectedEmployees(prev =>
+                          checked
+                            ? [...prev, employee.id]
+                            : prev.filter(id => id !== employee.id)
+                        );
+                      }}
+                    />
+                  </TableCell>
                   <TableCell>{employee.username}</TableCell>
                   <TableCell>
                     <Button
@@ -671,33 +831,7 @@ export default function EmployeeManagementPage() {
                     )}
                   </TableCell>
                   <TableCell>
-                    {user?.role === "admin" && employee.role !== "admin" ? (
-                      <Select
-                        value={employee.managerId?.toString() || "none"}
-                        onValueChange={(managerId) =>
-                          updateManagerMutation.mutate({
-                            userId: employee.id,
-                            managerId: managerId === "none" ? null : parseInt(managerId),
-                          })
-                        }
-                      >
-                        <SelectTrigger className="w-[200px]">
-                          <SelectValue placeholder="Chọn quản lý" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">Không có quản lý</SelectItem>
-                          {managers
-                            ?.filter((m) => m.id !== employee.id)
-                            .map((manager) => (
-                              <SelectItem key={manager.id} value={manager.id.toString()}>
-                                {manager.username}-{manager.name}
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      employees?.find(e => e.id === employee.managerId)?.name || "N/A"
-                    )}
+                    {employees?.find(e => e.id === employee.managerId)?.name || "N/A"}
                   </TableCell>
                   {user?.role === "admin" && (
                     <TableCell>
@@ -731,7 +865,7 @@ export default function EmployeeManagementPage() {
           </Table>
         </div>
 
-        {/* Phân trang */}
+        {/* Pagination */}
         {totalPages > 1 && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">

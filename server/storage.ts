@@ -32,6 +32,8 @@ export interface IStorage {
   updateThanksContent(id: number, data: { message?: string; fromId?: number; toId?: number; status?: "pending" | "approved" | "rejected"; approvedById?: number | null; approvedAt?: Date | null; rejectReason?: string | null; }): Promise<Thanks>;
   deleteThanks(id: number): Promise<void>;
   createManyUsers(users: InsertUser[]): Promise<User[]>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  updateManyUsers(userIds: number[], info: { title?: string; department?: string; managerId?: number | null }): Promise<User[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -264,6 +266,22 @@ export class DatabaseStorage implements IStorage {
       .values(insertUsers)
       .returning();
     return createdUsers;
+  }
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
+  }
+
+  async updateManyUsers(
+    userIds: number[],
+    info: { title?: string; department?: string; managerId?: number | null }
+  ): Promise<User[]> {
+    const updatedUsers = await db
+      .update(users)
+      .set(info)
+      .where(inArray(users.id, userIds))
+      .returning();
+    return updatedUsers;
   }
 }
 

@@ -301,6 +301,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bulk update users (admin only)
+  app.patch("/api/users/bulk-update", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (req.user!.role !== "admin") return res.sendStatus(403);
+
+    const { employeeIds, title, department, managerId } = req.body;
+
+    if (!Array.isArray(employeeIds) || employeeIds.length === 0) {
+      return res.status(400).send("No employees selected");
+    }
+
+    try {
+      // Don't allow updating admin users
+      const users = await storage.getAllUsers();
+      const adminIds = new Set(users.filter(u => u.role === "admin").map(u => u.id));
+      const validIds = employeeIds.filter(id => !adminIds.has(id));
+
+      if (validIds.length === 0) {
+        return res.status(400).send("Cannot update admin users");
+      }
+
+      // Update users
+      const updatedUsers = await storage.updateManyUsers(validIds, {
+        title,
+        department,
+        managerId,
+      });
+
+      res.json(updatedUsers);
+    } catch (error) {
+      console.error("Bulk update error:", error);
+      res.status(500).send("Failed to update users");
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
