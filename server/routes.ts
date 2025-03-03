@@ -366,9 +366,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (managerId === "none" || managerId === null) {
           updateData.managerId = null;
         } else {
+          // Convert string to number if needed
           const managerIdNum = typeof managerId === 'string' ? parseInt(managerId, 10) : managerId;
           if (!isNaN(managerIdNum)) {
             updateData.managerId = managerIdNum;
+          } else {
+            return res.status(400).send("Invalid manager ID format");
           }
         }
       }
