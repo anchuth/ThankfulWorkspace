@@ -138,9 +138,16 @@ export default function ApprovalPage() {
               <Card key={thanks.id}>
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg">
-                      {fromUser?.name} → {toUser?.name}
-                    </CardTitle>
+                    <div>
+                      <CardTitle className="text-lg">
+                        {fromUser?.name} → {toUser?.name}
+                      </CardTitle>
+                      <CardDescription>
+                        {formatDistance(new Date(thanks.createdAt), new Date(), {
+                          addSuffix: true,
+                        })}
+                      </CardDescription>
+                    </div>
                     <Badge
                       variant={
                         thanks.status === "approved"
@@ -157,14 +164,15 @@ export default function ApprovalPage() {
                         : "Từ chối"}
                     </Badge>
                   </div>
-                  <CardDescription>
-                    {formatDistance(new Date(thanks.createdAt), new Date(), {
-                      addSuffix: true,
-                    })}
-                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm mb-4">{thanks.message}</p>
+                  {thanks.status !== "pending" && (
+                    <p className="text-sm text-muted-foreground mb-4">
+                      {thanks.status === "approved" ? "Được duyệt" : "Bị từ chối"} bởi:{" "}
+                      {users?.find((u) => u.id === thanks.approvedById)?.name}
+                    </p>
+                  )}
                   {thanks.status === "rejected" && thanks.rejectReason && (
                     <p className="text-sm text-destructive mb-4">
                       Lý do từ chối: {thanks.rejectReason}

@@ -22,6 +22,7 @@ export const thanks = pgTable("thanks", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
   status: text("status", { enum: ["pending", "approved", "rejected"] }).notNull().default("pending"),
   approvedAt: timestamp("approved_at"),
+  approvedById: integer("approved_by_id").references(() => users.id),
   points: integer("points").notNull().default(1),
   rejectReason: text("reject_reason"),
 });
@@ -44,6 +45,10 @@ export const usersRelations = relations(users, ({ one, many }) => ({
     fields: [users.id],
     references: [thanks.fromId],
   }),
+  thanksApproved: many(thanks, {
+    fields: [users.id],
+    references: [thanks.approvedById],
+  }),
 }));
 
 export const thanksRelations = relations(thanks, ({ one }) => ({
@@ -53,6 +58,10 @@ export const thanksRelations = relations(thanks, ({ one }) => ({
   }),
   receiver: one(users, {
     fields: [thanks.toId],
+    references: [users.id],
+  }),
+  approvedBy: one(users, {
+    fields: [thanks.approvedById],
     references: [users.id],
   }),
 }));

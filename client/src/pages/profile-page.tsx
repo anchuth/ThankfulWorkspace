@@ -1,7 +1,7 @@
 import { Layout } from "@/components/layout";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
-import { Thanks } from "@shared/schema";
+import { Thanks, User } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatDistance } from "date-fns";
@@ -162,22 +162,38 @@ export default function ProfilePage() {
 }
 
 function ThanksCard({ thanks }: { thanks: Thanks }) {
+  const { data: users } = useQuery<User[]>({ queryKey: ["/api/users"] });
+
+  const fromUser = users?.find(u => u.id === thanks.fromId);
+  const toUser = users?.find(u => u.id === thanks.toId);
+  const approvedByUser = users?.find(u => u.id === thanks.approvedById);
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">
-          {formatDistance(new Date(thanks.createdAt), new Date(), {
-            addSuffix: true,
-          })}
-        </CardTitle>
+        <div>
+          <CardTitle className="text-sm font-medium">
+            {fromUser?.name} → {toUser?.name}
+          </CardTitle>
+          <CardDescription>
+            {formatDistance(new Date(thanks.createdAt), new Date(), {
+              addSuffix: true,
+            })}
+          </CardDescription>
+        </div>
         <Badge variant={thanks.status === "approved" ? "default" : "secondary"}>
-          {thanks.status === "pending" ? "Chờ duyệt" : 
+          {thanks.status === "pending" ? "Chờ duyệt" :
            thanks.status === "approved" ? "Đã duyệt" :
            "Từ chối"}
         </Badge>
       </CardHeader>
       <CardContent>
         <p className="text-sm">{thanks.message}</p>
+        {thanks.status !== "pending" && approvedByUser && (
+          <p className="text-sm text-muted-foreground mt-2">
+            {thanks.status === "approved" ? "Được duyệt" : "Bị từ chối"} bởi: {approvedByUser.name}
+          </p>
+        )}
         {thanks.status === "rejected" && thanks.rejectReason && (
           <p className="text-sm text-destructive mt-2">
             Lý do từ chối: {thanks.rejectReason}

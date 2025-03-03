@@ -18,7 +18,7 @@ export interface IStorage {
   getThanksById(id: number): Promise<Thanks | undefined>;
   getPendingThanksForManager(managerId: number): Promise<Thanks[]>;
   getAllPendingThanks(): Promise<Thanks[]>;
-  updateThanksStatus(id: number, status: "approved" | "rejected", reason?: string): Promise<Thanks>;
+  updateThanksStatus(id: number, status: "approved" | "rejected", approvedById: number, reason?: string): Promise<Thanks>;
   getReceivedThanksForUser(userId: number): Promise<Thanks[]>;
   getSentThanksForUser(userId: number): Promise<Thanks[]>;
   getRankings(period: "week" | "month" | "quarter" | "year"): Promise<{userId: number, points: number}[]>;
@@ -109,12 +109,18 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(thanks.createdAt));
   }
 
-  async updateThanksStatus(id: number, status: "approved" | "rejected", reason?: string): Promise<Thanks> {
+  async updateThanksStatus(
+    id: number,
+    status: "approved" | "rejected",
+    approvedById: number,
+    reason?: string
+  ): Promise<Thanks> {
     const [updated] = await db
       .update(thanks)
       .set({
         status,
         approvedAt: status === "approved" ? new Date() : null,
+        approvedById,
         rejectReason: status === "rejected" ? reason : null,
       })
       .where(eq(thanks.id, id))

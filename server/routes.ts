@@ -93,6 +93,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const thanks = await storage.updateThanksStatus(
       parseInt(id),
       action === "approve" ? "approved" : "rejected",
+      req.user!.id,
       reason
     );
     res.json(thanks);
