@@ -312,7 +312,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Bulk update users (admin only)
+  // Update the bulk update endpoint with proper validation
   app.patch("/api/users/bulk-update", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     if (req.user!.role !== "admin") return res.sendStatus(403);

@@ -273,9 +273,15 @@ export default function EmployeeManagementPage() {
       employeeIds: number[];
       title?: string;
       department?: string;
-      managerId?: number | null;
+      managerId?: number | null | "unchanged";
     }) => {
-      const res = await apiRequest("PATCH", "/api/users/bulk-update", data);
+      // Only send managerId if it's not "unchanged"
+      const payload = {
+        ...data,
+        managerId: data.managerId === "unchanged" ? undefined : data.managerId
+      };
+
+      const res = await apiRequest("PATCH", "/api/users/bulk-update", payload);
       if (!res.ok) {
         const error = await res.json();
         throw new Error(error.message || "Failed to update users");
@@ -291,7 +297,30 @@ export default function EmployeeManagementPage() {
         description: "Đã cập nhật thông tin cho các nhân viên đã chọn",
       });
     },
+    onError: (error: Error) => {
+      toast({
+        title: "Lỗi cập nhật",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   });
+
+  // Update bulk update form submit handler
+  const onBulkUpdateSubmit = (data: any) => {
+    const updateData: any = {
+      employeeIds: selectedEmployees,
+      managerId: "unchanged" // Default value
+    };
+
+    if (data.title?.trim()) updateData.title = data.title.trim();
+    if (data.department?.trim()) updateData.department = data.department.trim();
+    if (data.managerId && data.managerId !== "unchanged") {
+      updateData.managerId = data.managerId === "none" ? null : Number(data.managerId);
+    }
+
+    bulkUpdateMutation.mutate(updateData);
+  };
 
   // Redirect if not manager/admin
   if (user?.role !== "manager" && user?.role !== "admin") {
@@ -428,20 +457,6 @@ export default function EmployeeManagementPage() {
     }
   };
 
-  // Update the bulk update submit handler
-  const onBulkUpdateSubmit = (data: any) => {
-    const updateData: any = {
-      employeeIds: selectedEmployees,
-    };
-
-    if (data.title?.trim()) updateData.title = data.title.trim();
-    if (data.department?.trim()) updateData.department = data.department.trim();
-    if (data.managerId && data.managerId !== "unchanged") {
-      updateData.managerId = data.managerId === "none" ? null : Number(data.managerId);
-    }
-
-    bulkUpdateMutation.mutate(updateData);
-  };
 
   return (
     <Layout>
@@ -913,7 +928,7 @@ export default function EmployeeManagementPage() {
                 variant="outline"
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-              >
+                            >
                 Trang trước
               </Button>
 
@@ -935,7 +950,7 @@ export default function EmployeeManagementPage() {
                       key={pageNum}
                       variant={currentPage === pageNum ? "default" : "outline"}
                       onClick={() => setCurrentPage(pageNum)}
-                                        >
+                    >
                       {pageNum}
                     </Button>
                   );
