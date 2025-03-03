@@ -6,12 +6,14 @@ import {
   Home,
   LayoutDashboard,
   LogOut,
-  UserCircle,
+  Settings,
   Award,
   Menu,
   Users,
   MessageSquare,
   ClipboardCheck,
+  UserCircle,
+  ChevronDown,
 } from "lucide-react";
 import {
   Sheet,
@@ -20,6 +22,13 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 type NavItem = {
   name: string;
@@ -40,20 +49,15 @@ const navigation: NavItem[] = [
     icon: MessageSquare,
   },
   {
-    name: "Duyệt lời cảm ơn",
-    href: "/approvals",
-    icon: ClipboardCheck,
-    roles: ["manager", "admin"],
-  },
-  {
     name: "Dashboard",
     href: "/dashboard",
     icon: LayoutDashboard,
   },
   {
-    name: "Trang cá nhân",
-    href: "/profile",
-    icon: UserCircle,
+    name: "Duyệt lời cảm ơn",
+    href: "/approvals",
+    icon: ClipboardCheck,
+    roles: ["manager", "admin"],
   },
   {
     name: "Quản lý nhân viên",
@@ -81,11 +85,11 @@ export function Navbar() {
             <Button
               variant={isActive ? "default" : "ghost"}
               className={cn(
-                "flex items-center",
+                "flex items-center gap-2",
                 isActive && "bg-primary text-primary-foreground"
               )}
             >
-              <Icon className="h-4 w-4 mr-2" />
+              <Icon className="h-4 w-4" />
               {item.name}
             </Button>
           </Link>
@@ -94,70 +98,68 @@ export function Navbar() {
     </>
   );
 
+  const UserMenu = () => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" className="flex items-center gap-2">
+          <UserCircle className="h-5 w-5" />
+          <span className="hidden sm:inline">{user?.name}</span>
+          <ChevronDown className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <Link href="/profile">
+          <DropdownMenuItem className="cursor-pointer">
+            <Settings className="h-4 w-4 mr-2" />
+            Hồ sơ cá nhân
+          </DropdownMenuItem>
+        </Link>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          className="text-red-600 cursor-pointer"
+          onClick={() => logoutMutation.mutate()}
+          disabled={logoutMutation.isPending}
+        >
+          <LogOut className="h-4 w-4 mr-2" />
+          Đăng xuất
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
   return (
-    <nav className="border-b bg-background">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 items-center justify-between">
-          {/* Logo */}
-          <div className="flex items-center">
-            <Award className="h-8 w-8 text-primary" />
-            <span className="ml-2 text-xl font-bold">Recognition Portal</span>
-          </div>
+    <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container flex h-14 items-center">
+        <div className="flex items-center gap-2 font-semibold">
+          <Award className="h-6 w-6 text-primary" />
+          <span className="hidden md:inline">Recognition Portal</span>
+        </div>
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-4">
+        {/* Desktop Navigation */}
+        <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end md:space-x-4">
+          <div className="hidden md:flex items-center space-x-2">
             <NavLinks />
+          </div>
+          {user && <UserMenu />}
+        </div>
 
-            {/* User menu */}
-            <div className="flex items-center space-x-4">
-              <span className="text-sm">
-                Xin chào, <span className="font-medium">{user?.name}</span>
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => logoutMutation.mutate()}
-                disabled={logoutMutation.isPending}
-              >
-                <LogOut className="h-4 w-4 mr-2" />
-                Đăng xuất
+        {/* Mobile Navigation */}
+        <div className="md:hidden flex items-center ml-2">
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="md:hidden">
+                <Menu className="h-5 w-5" />
               </Button>
-            </div>
-          </div>
-
-          {/* Mobile Navigation */}
-          <div className="md:hidden">
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <Menu className="h-6 w-6" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent>
-                <SheetHeader>
-                  <SheetTitle>Menu</SheetTitle>
-                </SheetHeader>
-                <div className="flex flex-col space-y-3 mt-4">
-                  <NavLinks />
-                  <div className="pt-4 border-t">
-                    <span className="text-sm block mb-2">
-                      Xin chào, <span className="font-medium">{user?.name}</span>
-                    </span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full"
-                      onClick={() => logoutMutation.mutate()}
-                      disabled={logoutMutation.isPending}
-                    >
-                      <LogOut className="h-4 w-4 mr-2" />
-                      Đăng xuất
-                    </Button>
-                  </div>
-                </div>
-              </SheetContent>
-            </Sheet>
-          </div>
+            </SheetTrigger>
+            <SheetContent side="left">
+              <SheetHeader>
+                <SheetTitle>Menu</SheetTitle>
+              </SheetHeader>
+              <div className="flex flex-col space-y-2 mt-4">
+                <NavLinks />
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
       </div>
     </nav>
