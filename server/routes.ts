@@ -208,16 +208,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     if (req.user!.role !== "admin") return res.sendStatus(403);
 
-    const users = req.body;
+    const { users, defaultPassword } = req.body;
     if (!Array.isArray(users)) {
       return res.status(400).send("Invalid data format");
+    }
+
+    if (!defaultPassword) {
+      return res.status(400).send("Default password is required");
     }
 
     try {
       const BATCH_SIZE = 100; // Process 100 users at a time
       const transformedUsers = users.map(user => ({
         username: user.username,
-        password: Math.random().toString(36).slice(-8), // Generate random password
+        password: defaultPassword,
         name: `${user.first_name} ${user.last_name}`,
         title: user.position,
         department: user.department,

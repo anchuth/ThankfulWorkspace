@@ -54,6 +54,7 @@ export default function EmployeeManagementPage() {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [importData, setImportData] = useState<any[]>([]);
+  const [defaultPassword, setDefaultPassword] = useState("");
 
   const form = useForm({
     defaultValues: {
@@ -168,8 +169,11 @@ export default function EmployeeManagementPage() {
 
   // Mutation để import nhân viên hàng loạt
   const importEmployeesMutation = useMutation({
-    mutationFn: async (data: any[]) => {
-      const res = await apiRequest("POST", "/api/users/bulk-import", data);
+    mutationFn: async (data: { users: any[]; defaultPassword: string }) => {
+      const res = await apiRequest("POST", "/api/users/bulk-import", {
+        users: data.users,
+        defaultPassword: data.defaultPassword,
+      });
       if (!res.ok) {
         const error = await res.json();
         throw new Error(JSON.stringify(error));
@@ -180,6 +184,7 @@ export default function EmployeeManagementPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       setShowImportDialog(false);
       setImportData([]);
+      setDefaultPassword("");
       toast({
         title: "Import thành công",
         description: `Đã thêm ${data.total} nhân viên vào hệ thống`,
@@ -478,6 +483,15 @@ export default function EmployeeManagementPage() {
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Mật khẩu mặc định</Label>
+                    <Input
+                      type="text"
+                      value={defaultPassword}
+                      onChange={(e) => setDefaultPassword(e.target.value)}
+                      placeholder="Nhập mật khẩu mặc định cho tất cả nhân viên"
+                    />
+                  </div>
                   <div className="flex items-center gap-4">
                     <Button variant="outline" onClick={handleDownloadTemplate}>
                       <Download className="w-4 h-4 mr-2" />
@@ -532,7 +546,20 @@ export default function EmployeeManagementPage() {
                       </div>
                       <DialogFooter>
                         <Button
-                          onClick={() => importEmployeesMutation.mutate(importData)}
+                          onClick={() => {
+                            if (!defaultPassword.trim()) {
+                              toast({
+                                title: "Lỗi",
+                                description: "Vui lòng nhập mật khẩu mặc định",
+                                variant: "destructive",
+                              });
+                              return;
+                            }
+                            importEmployeesMutation.mutate({
+                              users: importData,
+                              defaultPassword: defaultPassword.trim(),
+                            });
+                          }}
                           disabled={importEmployeesMutation.isPending}
                         >
                           {importEmployeesMutation.isPending
