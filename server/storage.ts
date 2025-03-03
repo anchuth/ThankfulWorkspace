@@ -235,21 +235,28 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
   async deleteUser(userId: number): Promise<void> {
-    // First delete all thanks sent by or to this user
-    await db
-      .delete(thanks)
-      .where(
-        or(
-          eq(thanks.fromId, userId),
-          eq(thanks.toId, userId),
-          eq(thanks.approvedById, userId)
-        )
-      );
+    try {
+      await db.transaction(async (tx) => {
+        // First delete all thanks sent by or to this user
+        await tx
+          .delete(thanks)
+          .where(
+            or(
+              eq(thanks.fromId, userId),
+              eq(thanks.toId, userId),
+              eq(thanks.approvedById, userId)
+            )
+          );
 
-    // Then delete the user
-    await db
-      .delete(users)
-      .where(eq(users.id, userId));
+        // Then delete the user
+        await tx
+          .delete(users)
+          .where(eq(users.id, userId));
+      });
+    } catch (error) {
+      console.error("Transaction error while deleting user:", error);
+      throw error;
+    }
   }
   async updateThanksContent(id: number, data: { 
     message?: string; 
