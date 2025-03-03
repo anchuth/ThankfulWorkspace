@@ -34,6 +34,7 @@ export interface IStorage {
   createManyUsers(users: InsertUser[]): Promise<User[]>;
   getUserByEmail(email: string): Promise<User | undefined>;
   updateManyUsers(userIds: number[], info: { title?: string; department?: string; managerId?: number | null }): Promise<User[]>;
+  deleteManyUsers(userIds: number[]): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -307,6 +308,43 @@ export class DatabaseStorage implements IStorage {
       .where(inArray(users.id, userIds))
       .returning();
     return updatedUsers;
+  }
+  async deleteManyUsers(userIds: number[]): Promise<void> {
+    try {
+      // Validate that all IDs are numbers
+      const validIds = userIds.filter(id => !isNaN(id) && Number.isInteger(id));
+
+      if (validIds.length === 0) {
+        return; // No valid IDs to delete
+      }
+
+      await db.transaction(async (tx) => {
+        // First update users who have these users as their manager to have no manager
+        await tx
+          .update(users)
+          .set({ managerId: null })
+          .where(inArray(users.managerId, validIds));
+
+        // Delete all thanks related to these users
+        await tx
+          .delete(thanks)
+          .where(
+            or(
+              inArray(thanks.fromId, validIds),
+              inArray(thanks.toId, validIds),
+              inArray(thanks.approvedById, validIds)
+            )
+          );
+
+        // Then delete the users
+        await tx
+          .delete(users)
+          .where(inArray(users.id, validIds));
+      });
+    } catch (error) {
+      console.error("Transaction error while deleting users:", error);
+      throw error;
+    }
   }
 }
 

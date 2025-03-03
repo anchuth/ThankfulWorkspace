@@ -382,30 +382,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (req.user!.role !== "admin") return res.sendStatus(403);
 
     try {
-      // Lấy danh sách tất cả user trừ admin
+      // Get all non-admin users
       const users = await storage.getAllUsers();
       const nonAdminUsers = users.filter(u => u.role !== "admin");
 
-      // Kiểm tra các ràng buộc trước khi xóa
+      if (nonAdminUsers.length === 0) {
+        return res.status(400).send("Không có nhân viên nào để xóa");
+      }
+
+      // Get list of valid IDs
+      const userIds = nonAdminUsers.map(u => u.id).filter(id => !isNaN(id));
+
+      // Check manager constraints
       for (const user of nonAdminUsers) {
-        // Kiểm tra xem user có đang là manager của ai không
         const employees = await storage.getUsersByManagerId(user.id);
-        if (employees.length > 0) {
-          return res.status(400).send("Không thể xóa nhân viên vì có người đang được quản lý bởi họ");
+        if (employees && employees.length > 0) {
+          return res.status(400).send(`Không thể xóa nhân viên "${user.name}" vì họ đang là quản lý của ${employees.length} nhân viên khác`);
         }
       }
 
-      // Thực hiện xóa
-      const userIds = nonAdminUsers.map(u => u.id);
+      // Execute deletion
       await storage.deleteManyUsers(userIds);
 
       res.json({
         success: true,
+        message: `Đã xóa ${userIds.length} nhân viên thành công`,
         deletedCount: userIds.length
       });
     } catch (error) {
       console.error("Bulk delete error:", error);
-      res.status(500).send("Failed to delete users");
+      res.status(500).send("Không thể xóa nhân viên do có lỗi xảy ra");
     }
   });
 
