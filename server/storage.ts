@@ -203,6 +203,7 @@ export class DatabaseStorage implements IStorage {
       .map(([userId, points]) => ({ userId, points }))
       .sort((a, b) => b.points - a.points);
   }
+
   async updateUserPassword(userId: number, newPassword: string): Promise<User> {
     const [user] = await db
       .update(users)
@@ -211,6 +212,7 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return user;
   }
+
   async getRecentThanks(): Promise<Thanks[]> {
     return await db
       .select()
@@ -219,6 +221,7 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(thanks.createdAt))
       .limit(5);
   }
+
   async updateUserRole(userId: number, role: string): Promise<User> {
     const [user] = await db
       .update(users)
@@ -227,6 +230,7 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return user;
   }
+
   async updateUserInfo(userId: number, info: { title?: string; department?: string }): Promise<User> {
     const [user] = await db
       .update(users)
@@ -235,6 +239,7 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return user;
   }
+
   async deleteUser(userId: number): Promise<void> {
     try {
       await db.transaction(async (tx) => {
@@ -265,6 +270,7 @@ export class DatabaseStorage implements IStorage {
       throw error;
     }
   }
+
   async updateThanksContent(id: number, data: { 
     message?: string; 
     fromId?: number;
@@ -281,11 +287,13 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return updated;
   }
+
   async deleteThanks(id: number): Promise<void> {
     await db
       .delete(thanks)
       .where(eq(thanks.id, id));
   }
+
   async createManyUsers(insertUsers: InsertUser[]): Promise<User[]> {
     const createdUsers = await db
       .insert(users)
@@ -293,6 +301,7 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return createdUsers;
   }
+
   async getUserByEmail(email: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.email, email));
     return user;
@@ -309,6 +318,7 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return updatedUsers;
   }
+
   async deleteManyUsers(userIds: number[]): Promise<void> {
     try {
       // Validate that all IDs are numbers
@@ -317,6 +327,8 @@ export class DatabaseStorage implements IStorage {
       if (validIds.length === 0) {
         return; // No valid IDs to delete
       }
+
+      console.log("Deleting users with IDs:", validIds);
 
       await db.transaction(async (tx) => {
         // First update users who have these users as their manager to have no manager
