@@ -26,6 +26,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -33,11 +34,19 @@ import { useState } from "react";
 import { Redirect } from "wouter";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useForm } from "react-hook-form";
 
 export default function EmployeeManagementPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+
+  const form = useForm({
+    defaultValues: {
+      title: "",
+      department: "",
+    },
+  });
 
   // Lấy danh sách nhân viên tùy theo role
   const { data: employees } = useQuery<User[]>({
@@ -81,10 +90,13 @@ export default function EmployeeManagementPage() {
     },
   });
 
-    // Mutation để cập nhật thông tin nhân viên
+  // Mutation để cập nhật thông tin nhân viên
   const updateEmployeeMutation = useMutation({
-    mutationFn: async ({ userId, data }: { userId: number; data: Partial<User> }) => {
-      const res = await apiRequest("PATCH", `/api/users/${userId}`, data);
+    mutationFn: async (data: { userId: number; title: string; department: string }) => {
+      const res = await apiRequest("PATCH", `/api/users/${data.userId}`, {
+        title: data.title,
+        department: data.department,
+      });
       return res.json();
     },
     onSuccess: () => {
@@ -100,6 +112,25 @@ export default function EmployeeManagementPage() {
   if (user?.role !== "manager" && user?.role !== "admin") {
     return <Redirect to="/" />;
   }
+
+  // Set form values when selecting a user
+  const handleSelectUser = (employee: User) => {
+    setSelectedUser(employee);
+    form.reset({
+      title: employee.title || "",
+      department: employee.department || "",
+    });
+  };
+
+  // Handle form submission
+  const onSubmit = (data: any) => {
+    if (!selectedUser) return;
+    updateEmployeeMutation.mutate({
+      userId: selectedUser.id,
+      title: data.title,
+      department: data.department,
+    });
+  };
 
   return (
     <Layout>
@@ -134,7 +165,7 @@ export default function EmployeeManagementPage() {
                     <Button
                       variant="link"
                       className="p-0 h-auto font-normal"
-                      onClick={() => setSelectedUser(employee)}
+                      onClick={() => handleSelectUser(employee)}
                     >
                       {employee.name}
                     </Button>
@@ -198,7 +229,7 @@ export default function EmployeeManagementPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setSelectedUser(employee)}
+                        onClick={() => handleSelectUser(employee)}
                       >
                         Chi tiết
                       </Button>
@@ -220,7 +251,7 @@ export default function EmployeeManagementPage() {
               Chi tiết thông tin của nhân viên {selectedUser?.name}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div>
               <p className="font-medium">Mã số nhân viên</p>
               <p className="text-sm text-muted-foreground">{selectedUser?.username}</p>
@@ -232,28 +263,18 @@ export default function EmployeeManagementPage() {
             {user?.role === "admin" ? (
               <>
                 <div className="space-y-2">
-                  <Label>Chức danh</Label>
+                  <Label htmlFor="title">Chức danh</Label>
                   <Input
-                    value={selectedUser?.title || ""}
-                    onChange={(e) =>
-                      updateEmployeeMutation.mutate({
-                        userId: selectedUser!.id,
-                        data: { title: e.target.value },
-                      })
-                    }
+                    id="title"
+                    {...form.register("title")}
                     placeholder="Nhập chức danh"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Bộ phận</Label>
+                  <Label htmlFor="department">Bộ phận</Label>
                   <Input
-                    value={selectedUser?.department || ""}
-                    onChange={(e) =>
-                      updateEmployeeMutation.mutate({
-                        userId: selectedUser!.id,
-                        data: { department: e.target.value },
-                      })
-                    }
+                    id="department"
+                    {...form.register("department")}
                     placeholder="Nhập bộ phận"
                   />
                 </div>
@@ -298,7 +319,14 @@ export default function EmployeeManagementPage() {
                   : "Không có"}
               </div>
             </div>
-          </div>
+            {user?.role === "admin" && (
+              <DialogFooter>
+                <Button type="submit" disabled={updateEmployeeMutation.isPending}>
+                  {updateEmployeeMutation.isPending ? "Đang cập nhật..." : "Lưu thay đổi"}
+                </Button>
+              </DialogFooter>
+            )}
+          </form>
         </DialogContent>
       </Dialog>
     </Layout>
