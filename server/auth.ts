@@ -179,7 +179,6 @@ export function setupAuth(app: Express) {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     res.json(req.user);
   });
-
   app.post("/api/change-password", async (req, res, next) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
 
