@@ -13,6 +13,15 @@ import { useForm } from "react-hook-form";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -72,7 +81,8 @@ export default function ProfilePage() {
           <div>
             <h1 className="text-3xl font-bold mb-2">{user?.name}</h1>
             <p className="text-muted-foreground">
-              {user?.role.charAt(0).toUpperCase() + user?.role.slice(1)}
+              {user?.role === "admin" ? "Quản trị viên" : 
+               user?.role === "manager" ? "Quản lý" : "Nhân viên"}
             </p>
             <p className="text-muted-foreground">
               Mã số nhân viên: {user?.username}
@@ -80,48 +90,55 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Đổi mật khẩu</CardTitle>
-            <CardDescription>
-              Để bảo mật tài khoản, bạn nên thường xuyên thay đổi mật khẩu
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="currentPassword">Mật khẩu hiện tại</Label>
-                <Input
-                  id="currentPassword"
-                  type="password"
-                  {...form.register("currentPassword")}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="newPassword">Mật khẩu mới</Label>
-                <Input
-                  id="newPassword"
-                  type="password"
-                  {...form.register("newPassword")}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Xác nhận mật khẩu mới</Label>
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  {...form.register("confirmPassword")}
-                  required
-                />
-              </div>
-              <Button type="submit" disabled={changePasswordMutation.isPending}>
-                {changePasswordMutation.isPending ? "Đang xử lý..." : "Đổi mật khẩu"}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+        <div className="flex justify-end">
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button>Đổi mật khẩu</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Đổi mật khẩu</DialogTitle>
+                <DialogDescription>
+                  Để bảo mật tài khoản, bạn nên thường xuyên thay đổi mật khẩu
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="currentPassword">Mật khẩu hiện tại</Label>
+                  <Input
+                    id="currentPassword"
+                    type="password"
+                    {...form.register("currentPassword")}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="newPassword">Mật khẩu mới</Label>
+                  <Input
+                    id="newPassword"
+                    type="password"
+                    {...form.register("newPassword")}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Xác nhận mật khẩu mới</Label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    {...form.register("confirmPassword")}
+                    required
+                  />
+                </div>
+                <DialogFooter>
+                  <Button type="submit" disabled={changePasswordMutation.isPending}>
+                    {changePasswordMutation.isPending ? "Đang xử lý..." : "Đổi mật khẩu"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
 
         <div className="grid md:grid-cols-2 gap-8">
           <section>
