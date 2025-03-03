@@ -287,14 +287,7 @@ function EmployeeManagementPage() {
       department?: string;
       managerId?: number | null;
     }) => {
-      const payload = {
-        employeeIds: data.employeeIds,
-        ...(data.title?.trim() ? { title: data.title.trim() } : {}),
-        ...(data.department?.trim() ? { department: data.department.trim() } : {}),
-        ...(data.managerId !== undefined ? { managerId: data.managerId } : {})
-      };
-
-      const res = await apiRequest("PATCH", "/api/users/bulk-update", payload);
+      const res = await apiRequest("PATCH", "/api/users/bulk-update", data);
       if (!res.ok) {
         const error = await res.json();
         throw new Error(error.message || "Failed to update users");
@@ -338,9 +331,12 @@ function EmployeeManagementPage() {
       updateData.department = data.department.trim();
     }
 
+    // Handle managerId correctly
     if (data.managerId !== "unchanged") {
-      updateData.managerId = data.managerId === "none" ? null : parseInt(data.managerId, 10);
+      updateData.managerId = data.managerId === "none" ? null : parseInt(data.managerId);
     }
+
+    console.log('Sending bulk update:', updateData); // Debug log
 
     bulkUpdateMutation.mutate(updateData);
   };
