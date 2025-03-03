@@ -42,20 +42,18 @@ function ThanksCard({ thanks, users }: { thanks: Thanks; users?: User[] }) {
             <p className="text-sm font-medium">
               {formatUserName(fromUser)} → {formatUserName(toUser)}
             </p>
-            <p className="text-xs text-muted-foreground">
-              {formatDistance(new Date(thanks.createdAt), new Date(), {
-                addSuffix: true,
-                locale: vi,
-              })}
-            </p>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span>{toUser?.department}</span>
+              <span>•</span>
+              <span>
+                {formatDistance(new Date(thanks.createdAt), new Date(), {
+                  addSuffix: true,
+                  locale: vi,
+                })}
+              </span>
+            </div>
           </div>
         </div>
-        <Badge 
-          variant="outline" 
-          className="text-xs bg-primary/5 hover:bg-primary/10 transition-colors"
-        >
-          Đã duyệt
-        </Badge>
       </div>
 
       <div className="prose prose-sm max-w-none text-muted-foreground">
