@@ -68,6 +68,7 @@ export default function HomePage() {
                     {recentThanks?.slice(0, 5).map((thanks) => {
                       const fromUser = users?.find(u => u.id === thanks.fromId);
                       const toUser = users?.find(u => u.id === thanks.toId);
+                      const approvedByUser = users?.find(u => u.id === thanks.approvedById);
                       return (
                         <div key={thanks.id} className="border-b pb-4 last:border-0">
                           <div className="flex items-center justify-between mb-2">
@@ -75,10 +76,22 @@ export default function HomePage() {
                               {fromUser?.name} → {toUser?.name}
                             </p>
                             <Badge variant={thanks.status === "approved" ? "default" : "secondary"}>
-                              {thanks.status}
+                              {thanks.status === "pending" ? "Chờ duyệt" :
+                               thanks.status === "approved" ? "Đã duyệt" :
+                               "Từ chối"}
                             </Badge>
                           </div>
                           <p className="text-sm text-muted-foreground">{thanks.message}</p>
+                          {thanks.status !== "pending" && approvedByUser && (
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {thanks.status === "approved" ? "Được duyệt" : "Bị từ chối"} bởi: {approvedByUser.name}
+                            </p>
+                          )}
+                          {thanks.status === "rejected" && thanks.rejectReason && (
+                            <p className="text-sm text-destructive mt-1">
+                              Lý do từ chối: {thanks.rejectReason}
+                            </p>
+                          )}
                           <p className="text-xs text-muted-foreground mt-2">
                             {formatDistance(new Date(thanks.createdAt), new Date(), {
                               addSuffix: true,
