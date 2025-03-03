@@ -15,6 +15,7 @@ import {
   UserCircle,
   ChevronDown,
   MessagesSquare,
+  Trophy, // Added Trophy import
 } from "lucide-react";
 import {
   Sheet,
@@ -48,6 +49,11 @@ const navigation: NavItem[] = [
     name: "Gửi lời cảm ơn",
     href: "/thanks",
     icon: MessageSquare,
+  },
+  {
+    name: "Bảng xếp hạng",
+    href: "/rankings",
+    icon: Trophy,
   },
   {
     name: "Dashboard",
