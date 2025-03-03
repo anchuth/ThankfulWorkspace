@@ -23,6 +23,7 @@ export interface IStorage {
   getRankings(period: "week" | "month" | "quarter" | "year"): Promise<{userId: number, points: number}[]>;
   sessionStore: session.Store;
   updateUserPassword(userId: number, newPassword: string): Promise<User>;
+  getRecentThanks(): Promise<Thanks[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -181,6 +182,13 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, userId))
       .returning();
     return user;
+  }
+  async getRecentThanks(): Promise<Thanks[]> {
+    return await db
+      .select()
+      .from(thanks)
+      .orderBy(desc(thanks.createdAt))
+      .limit(5);
   }
 }
 

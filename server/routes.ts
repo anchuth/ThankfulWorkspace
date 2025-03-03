@@ -10,9 +10,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all users (for user selection)
   app.get("/api/users", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    if (req.user!.role !== "admin") return res.sendStatus(403);
     const users = await storage.getAllUsers();
     res.json(users);
+  });
+
+  // Get recent thanks
+  app.get("/api/thanks/recent", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const thanks = await storage.getRecentThanks();
+    res.json(thanks);
   });
 
   // Get users managed by a manager

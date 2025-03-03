@@ -10,6 +10,7 @@ import {
   Award,
   Menu,
   Users,
+  MessageSquare,
 } from "lucide-react";
 import {
   Sheet,
@@ -31,6 +32,11 @@ const navigation: NavItem[] = [
     name: "Trang chủ",
     href: "/",
     icon: Home,
+  },
+  {
+    name: "Gửi lời cảm ơn",
+    href: "/thanks",
+    icon: MessageSquare,
   },
   {
     name: "Dashboard",
