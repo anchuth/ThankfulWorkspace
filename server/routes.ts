@@ -249,12 +249,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Transform imported data to match our schema
       const transformedUsers = users.map(user => ({
         username: user.username,
-        password: defaultPassword.trim(), // Will be hashed in createManyUsers
+        password: defaultPassword.trim(), // Will be hashed below
         name: `${user.first_name} ${user.last_name}`,
         title: user.position,
         department: user.department,
         role: "employee", // Default role
-        email: user.email
+        email: user.email || `${user.username}@example.com` // Ensure email exists
       }));
 
       // Check for duplicates
