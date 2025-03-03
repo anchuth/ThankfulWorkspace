@@ -1,7 +1,7 @@
 import { InsertUser, User, Thanks, InsertThanks, users, thanks } from "@shared/schema";
 import session from "express-session";
 import { db } from "./db";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, gte } from "drizzle-orm";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
 
@@ -171,7 +171,7 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           eq(thanks.status, "approved"),
-          //gte(thanks.approvedAt, cutoff)
+          gte(thanks.approvedAt, cutoff)
         )
       );
 
@@ -197,6 +197,7 @@ export class DatabaseStorage implements IStorage {
     return await db
       .select()
       .from(thanks)
+      .where(eq(thanks.status, "approved"))
       .orderBy(desc(thanks.createdAt))
       .limit(5);
   }
