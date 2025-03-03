@@ -100,9 +100,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (req.user!.role !== "admin") return res.sendStatus(403);
 
     const userId = parseInt(req.params.userId);
-    const { title, department } = req.body;
+    const { title, department, email } = req.body;
 
-    const user = await storage.updateUserInfo(userId, { title, department });
+    // Validate email format
+    const parsed = insertUserSchema.pick({ email: true }).safeParse({ email });
+    if (!parsed.success) {
+      return res.status(400).json(parsed.error);
+    }
+
+    // Check if email already exists for another user
+    if (email) {
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser && existingUser.id !== userId) {
+        return res.status(400).send("Email đã được sử dụng bởi người khác");
+      }
+    }
+
+    const user = await storage.updateUserInfo(userId, { title, department, email });
     res.json(user);
   });
 

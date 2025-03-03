@@ -40,6 +40,8 @@ import { Search, Plus, Trash2, Download, Upload } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as XLSX from 'xlsx';
 import { Progress } from "@/components/ui/progress";
+import { z } from "zod";
+
 
 export default function EmployeeManagementPage() {
   const { user } = useAuth();
@@ -59,7 +61,15 @@ export default function EmployeeManagementPage() {
     defaultValues: {
       title: "",
       department: "",
+      email: "",
     },
+    resolver: zodResolver(
+      insertUserSchema.pick({
+        title: true,
+        department: true,
+        email: true,
+      })
+    ),
   });
 
   const addForm = useForm({
@@ -71,6 +81,7 @@ export default function EmployeeManagementPage() {
       title: "",
       department: "",
       role: "employee",
+      email: "",
     },
   });
 
@@ -118,10 +129,11 @@ export default function EmployeeManagementPage() {
 
   // Mutation để cập nhật thông tin nhân viên
   const updateEmployeeMutation = useMutation({
-    mutationFn: async (data: { userId: number; title: string; department: string }) => {
+    mutationFn: async (data: { userId: number; title: string; department: string; email: string }) => {
       const res = await apiRequest("PATCH", `/api/users/${data.userId}`, {
         title: data.title,
         department: data.department,
+        email: data.email,
       });
       return res.json();
     },
@@ -255,6 +267,7 @@ export default function EmployeeManagementPage() {
     form.reset({
       title: employee.title || "",
       department: employee.department || "",
+      email: employee.email || "",
     });
   };
 
@@ -265,6 +278,7 @@ export default function EmployeeManagementPage() {
       userId: selectedUser.id,
       title: data.title,
       department: data.department,
+      email: data.email,
     });
   };
 
@@ -462,6 +476,15 @@ export default function EmployeeManagementPage() {
                     />
                   </div>
                   <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      {...addForm.register("email")}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
                     <Label htmlFor="role">Chức vụ</Label>
                     <Select
                       value={addForm.watch("role")}
@@ -600,6 +623,7 @@ export default function EmployeeManagementPage() {
               <TableRow>
                 <TableHead>Mã số</TableHead>
                 <TableHead>Tên nhân viên</TableHead>
+                <TableHead>Email</TableHead>
                 <TableHead>Chức danh</TableHead>
                 <TableHead>Bộ phận</TableHead>
                 <TableHead>Chức vụ</TableHead>
@@ -620,6 +644,7 @@ export default function EmployeeManagementPage() {
                       {employee.name}
                     </Button>
                   </TableCell>
+                  <TableCell>{employee.email}</TableCell>
                   <TableCell>{employee.title || "Chưa cập nhật"}</TableCell>
                   <TableCell>{employee.department || "Chưa cập nhật"}</TableCell>
                   <TableCell>
@@ -822,6 +847,25 @@ export default function EmployeeManagementPage() {
               <div>
                 <p className="font-medium">Họ và tên</p>
                 <p className="text-sm text-muted-foreground">{selectedUser?.name}</p>
+              </div>
+              <div>
+                <p className="font-medium">Email</p>
+                {user?.role === "admin" ? (
+                  <div className="space-y-2">
+                    <Input
+                      type="email"
+                      {...form.register("email")}
+                      placeholder="Nhập email"
+                    />
+                    {form.formState.errors.email && (
+                      <p className="text-sm text-destructive">
+                        {form.formState.errors.email.message}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">{selectedUser?.email}</p>
+                )}
               </div>
               {user?.role === "admin" ? (
                 <>
