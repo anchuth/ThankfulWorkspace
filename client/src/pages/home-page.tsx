@@ -9,6 +9,16 @@ import { Button } from "@/components/ui/button";
 import { LogIn, MessageSquare, Trophy } from "lucide-react";
 import { Link } from "wouter";
 
+function formatUserName(user?: User) {
+  if (!user) return "N/A";
+  return `${user.username}-${user.name}`;
+}
+
+function truncateMessage(message: string, maxLength: number = 100) {
+  if (message.length <= maxLength) return message;
+  return message.substring(0, maxLength) + "...";
+}
+
 export default function HomePage() {
   const { user } = useAuth();
   const { data: recentThanks } = useQuery<Thanks[]>({
@@ -68,34 +78,20 @@ export default function HomePage() {
                     {recentThanks?.slice(0, 5).map((thanks) => {
                       const fromUser = users?.find(u => u.id === thanks.fromId);
                       const toUser = users?.find(u => u.id === thanks.toId);
-                      const approvedByUser = users?.find(u => u.id === thanks.approvedById);
                       return (
                         <div key={thanks.id} className="border-b pb-4 last:border-0">
                           <div className="flex items-center justify-between mb-2">
                             <p className="text-sm font-medium">
-                              {fromUser?.name} → {toUser?.name}
+                              {formatUserName(fromUser)} → {formatUserName(toUser)}
                             </p>
-                            <Badge variant={thanks.status === "approved" ? "default" : "secondary"}>
-                              {thanks.status === "pending" ? "Chờ duyệt" :
-                               thanks.status === "approved" ? "Đã duyệt" :
-                               "Từ chối"}
-                            </Badge>
+                            <span className="text-xs text-muted-foreground">
+                              {formatDistance(new Date(thanks.createdAt), new Date(), {
+                                addSuffix: true,
+                              })}
+                            </span>
                           </div>
-                          <p className="text-sm text-muted-foreground">{thanks.message}</p>
-                          {thanks.status !== "pending" && approvedByUser && (
-                            <p className="text-sm text-muted-foreground mt-1">
-                              {thanks.status === "approved" ? "Được duyệt" : "Bị từ chối"} bởi: {approvedByUser.name}
-                            </p>
-                          )}
-                          {thanks.status === "rejected" && thanks.rejectReason && (
-                            <p className="text-sm text-destructive mt-1">
-                              Lý do từ chối: {thanks.rejectReason}
-                            </p>
-                          )}
-                          <p className="text-xs text-muted-foreground mt-2">
-                            {formatDistance(new Date(thanks.createdAt), new Date(), {
-                              addSuffix: true,
-                            })}
+                          <p className="text-sm text-muted-foreground">
+                            {truncateMessage(thanks.message)}
                           </p>
                         </div>
                       );
