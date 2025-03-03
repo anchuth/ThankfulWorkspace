@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input"; // Added Input import
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -30,8 +30,8 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { insertThanksSchema, User } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Search } from "lucide-react"; // Added Search icon import
-import { useState } from "react"; // Added useState import
+import { Search } from "lucide-react";
+import { useState } from "react";
 
 const TEMPLATE_MESSAGES = [
   {
@@ -72,7 +72,8 @@ export function SendThanks() {
   const { user } = useAuth();
   const { toast } = useToast();
   const { data: users } = useQuery<User[]>({ queryKey: ["/api/users"] });
-  const [searchTerm, setSearchTerm] = useState(""); // Added search state
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
 
   const form = useForm({
     resolver: zodResolver(insertThanksSchema),
@@ -99,7 +100,7 @@ export function SendThanks() {
 
   // Filter users based on search term
   const filteredUsers = users?.filter((u) => {
-    if (!searchTerm) return true;
+    if (!searchTerm || !isSearching) return true;
     const searchLower = searchTerm.toLowerCase();
     return (
       u.name.toLowerCase().includes(searchLower) ||
@@ -131,6 +132,12 @@ export function SendThanks() {
                   <Select
                     onValueChange={(val) => field.onChange(parseInt(val))}
                     value={field.value?.toString()}
+                    onOpenChange={(open) => {
+                      if (!open) {
+                        setSearchTerm("");
+                        setIsSearching(false);
+                      }
+                    }}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -143,7 +150,12 @@ export function SendThanks() {
                         <Input
                           placeholder="Tìm kiếm theo tên, mã nhân viên hoặc bộ phận..."
                           value={searchTerm}
-                          onChange={(e) => setSearchTerm(e.target.value)}
+                          onChange={(e) => {
+                            setSearchTerm(e.target.value);
+                            setIsSearching(true);
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          autoComplete="off"
                           className="h-8"
                         />
                       </div>
