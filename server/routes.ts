@@ -127,13 +127,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     const userId = parseInt(req.params.userId);
 
-    // Không cho phép xóa admin
-    const user = await storage.getUser(userId);
-    if (!user || user.role === "admin") {
-      return res.status(400).send("Cannot delete admin user");
-    }
-
     try {
+      // Không cho phép xóa admin
+      const user = await storage.getUser(userId);
+      if (!user || user.role === "admin") {
+        return res.status(400).send("Cannot delete admin user");
+      }
+
       // Check if the user is a manager with employees
       const employees = await storage.getUsersByManagerId(userId);
       if (employees.length > 0) {
