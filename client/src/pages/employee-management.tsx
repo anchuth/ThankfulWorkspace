@@ -41,8 +41,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as XLSX from 'xlsx';
 import { Progress } from "@/components/ui/progress";
 
-const ITEMS_PER_PAGE = 10;
-
 export default function EmployeeManagementPage() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -55,6 +53,7 @@ export default function EmployeeManagementPage() {
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [importData, setImportData] = useState<any[]>([]);
   const [defaultPassword, setDefaultPassword] = useState("");
+  const [pageSize, setPageSize] = useState(20);
 
   const form = useForm({
     defaultValues: {
@@ -290,10 +289,11 @@ export default function EmployeeManagementPage() {
     return matchesSearch && matchesRole && matchesDepartment;
   });
 
-  const totalPages = Math.ceil((filteredEmployees?.length || 0) / ITEMS_PER_PAGE);
+  const totalFilteredItems = filteredEmployees?.length || 0;
+  const totalPages = Math.ceil(totalFilteredItems / pageSize);
   const paginatedEmployees = filteredEmployees?.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
   );
 
   // Get unique departments for filter
@@ -708,30 +708,100 @@ export default function EmployeeManagementPage() {
 
         {/* Phân trang */}
         {totalPages > 1 && (
-          <div className="flex justify-center gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-            >
-              Trang trước
-            </Button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Label>Hiển thị</Label>
+                <Select
+                  value={pageSize.toString()}
+                  onValueChange={(value) => {
+                    setPageSize(Number(value));
+                    setCurrentPage(1); // Reset to first page when changing page size
+                  }}
+                >
+                  <SelectTrigger className="w-[100px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="20">20</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Label>dòng mỗi trang</Label>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                Trang {currentPage}/{totalPages} ({totalFilteredItems} nhân viên)
+              </div>
+            </div>
+
+            <div className="flex justify-center gap-2">
               <Button
-                key={page}
-                variant={currentPage === page ? "default" : "outline"}
-                onClick={() => setCurrentPage(page)}
+                variant="outline"
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1}
               >
-                {page}
+                Trang đầu
               </Button>
-            ))}
-            <Button
-              variant="outline"
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-            >
-              Trang sau
-            </Button>
+              <Button
+                variant="outline"
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+              >
+                Trang trước
+              </Button>
+
+              <div className="flex gap-2">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+
+                  return (
+                    <Button
+                      key={pageNum}
+                      variant={currentPage === pageNum ? "default" : "outline"}
+                      onClick={() => setCurrentPage(pageNum)}
+                    >
+                      {pageNum}
+                    </Button>
+                  );
+                })}
+                {totalPages > 5 && currentPage < totalPages - 2 && (
+                  <>
+                    <span className="px-2 flex items-center">...</span>
+                    <Button
+                      variant="outline"
+                      onClick={() => setCurrentPage(totalPages)}
+                    >
+                      {totalPages}
+                    </Button>
+                  </>
+                )}
+              </div>
+
+              <Button
+                variant="outline"
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+              >
+                Trang sau
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={currentPage === totalPages}
+              >
+                Trang cuối
+              </Button>
+            </div>
           </div>
         )}
 
