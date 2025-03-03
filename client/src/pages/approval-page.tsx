@@ -45,11 +45,9 @@ type ThanksStatus = "pending" | "approved" | "rejected" | "all";
 export default function ApprovalPage() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [filter, setFilter] = useState<ThanksStatus>("all");
   const [selectedThanks, setSelectedThanks] = useState<Thanks | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"pending" | "history">("pending");
 
   // Redirect if not manager/admin
   if (user?.role !== "manager" && user?.role !== "admin") {
@@ -114,20 +112,24 @@ export default function ApprovalPage() {
     });
   };
 
-  // Filter thanks based on status
-  const filteredThanks = thanks?.filter((t) => {
-    if (filter === "all") return true;
-    return t.status === filter;
-  });
+  // Get managed users' IDs
+  const managedUsers = users?.filter(u => u.managerId === user?.id) || [];
+  const managedUserIds = managedUsers.map(u => u.id);
 
-  // Get pending thanks
-  const pendingThanks = thanks?.filter(t => t.status === "pending");
+  // Get pending thanks for managed users
+  const pendingThanks = thanks?.filter(t => 
+    t.status === "pending" && 
+    managedUserIds.includes(t.toId)
+  );
 
-  // Get history thanks (approved/rejected)
+  // Get history thanks (approved/rejected by current manager)
   const historyThanks = thanks?.filter(t => 
     (t.status === "approved" || t.status === "rejected") && 
     t.approvedById === user?.id
   );
+
+  console.log('Current user:', user?.id);
+  console.log('History thanks:', historyThanks);
 
   if (isLoading) {
     return (
@@ -156,23 +158,6 @@ export default function ApprovalPage() {
           </TabsList>
 
           <TabsContent value="pending" className="space-y-4">
-            <div className="flex justify-between items-center">
-              <Select
-                value={filter}
-                onValueChange={(value) => setFilter(value as ThanksStatus)}
-              >
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Lọc trạng thái" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tất cả</SelectItem>
-                  <SelectItem value="pending">Chờ duyệt</SelectItem>
-                  <SelectItem value="approved">Đã duyệt</SelectItem>
-                  <SelectItem value="rejected">Từ chối</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
             <div className="space-y-4">
               {pendingThanks?.map((thanks) => {
                 const fromUser = users?.find((u) => u.id === thanks.fromId);
@@ -192,49 +177,35 @@ export default function ApprovalPage() {
                             })}
                           </CardDescription>
                         </div>
-                        <Badge
-                          variant={
-                            thanks.status === "approved"
-                              ? "default"
-                              : thanks.status === "rejected"
-                              ? "destructive"
-                              : "secondary"
-                          }
-                        >
-                          {thanks.status === "pending"
-                            ? "Chờ duyệt"
-                            : thanks.status === "approved"
-                            ? "Đã duyệt"
-                            : "Từ chối"}
+                        <Badge variant="secondary">
+                          Chờ duyệt
                         </Badge>
                       </div>
                     </CardHeader>
                     <CardContent>
                       <p className="text-sm mb-4">{thanks.message}</p>
-                      {thanks.status === "pending" && (
-                        <div className="flex gap-2">
-                          <Button
-                            onClick={() =>
-                              updateMutation.mutate({
-                                thanksId: thanks.id,
-                                action: "approve",
-                              })
-                            }
-                            disabled={updateMutation.isPending}
-                          >
-                            <Check className="h-4 w-4 mr-1" />
-                            Phê duyệt
-                          </Button>
-                          <Button
-                            variant="outline"
-                            onClick={() => handleReject(thanks)}
-                            disabled={updateMutation.isPending}
-                          >
-                            <X className="h-4 w-4 mr-1" />
-                            Từ chối
-                          </Button>
-                        </div>
-                      )}
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() =>
+                            updateMutation.mutate({
+                              thanksId: thanks.id,
+                              action: "approve",
+                            })
+                          }
+                          disabled={updateMutation.isPending}
+                        >
+                          <Check className="h-4 w-4 mr-1" />
+                          Phê duyệt
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => handleReject(thanks)}
+                          disabled={updateMutation.isPending}
+                        >
+                          <X className="h-4 w-4 mr-1" />
+                          Từ chối
+                        </Button>
+                      </div>
                     </CardContent>
                   </Card>
                 );
@@ -264,9 +235,13 @@ export default function ApprovalPage() {
                             {fromUser?.name} → {toUser?.name}
                           </CardTitle>
                           <CardDescription>
-                            Đã xử lý: {formatDistance(new Date(thanks.approvedAt!), new Date(), {
-                              addSuffix: true,
-                            })}
+                            {thanks.approvedAt && (
+                              <>
+                                Đã xử lý: {formatDistance(new Date(thanks.approvedAt), new Date(), {
+                                  addSuffix: true,
+                                })}
+                              </>
+                            )}
                           </CardDescription>
                         </div>
                         <Badge
