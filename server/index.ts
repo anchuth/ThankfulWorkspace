@@ -3,8 +3,6 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: false, limit: '50mb' }));
 
 // Add logging middleware
 app.use((req, res, next) => {
@@ -25,11 +23,6 @@ app.use((req, res, next) => {
       if (capturedJsonResponse) {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
       }
-
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
-
       log(logLine);
     }
   });
@@ -37,12 +30,16 @@ app.use((req, res, next) => {
   next();
 });
 
-// Wrap server startup in an async IIFE with error handling
+// Setup express with error handling
 (async () => {
   try {
-    const server = await registerRoutes(app);
+    log("Starting server initialization...");
 
-    // Error handling middleware
+    // Register all routes and get HTTP server
+    const server = await registerRoutes(app);
+    log("Routes registered successfully");
+
+    // Error handling middleware should be after routes
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
       // Don't send response for aborted requests
       if (err.code === 'ECONNABORTED' || err.type === 'request.aborted') {
@@ -63,19 +60,21 @@ app.use((req, res, next) => {
     // Setup Vite in development
     if (app.get("env") === "development") {
       await setupVite(app, server);
+      log("Vite middleware setup complete");
     } else {
       serveStatic(app);
+      log("Static serving setup complete");
     }
 
-    // Listen on all network interfaces
+    // Listen on all network interfaces with hardcoded port 5000
     const port = 5000;
     server.listen({
       port,
       host: "0.0.0.0",
-      reusePort: true,
     }, () => {
       log(`Server running at http://0.0.0.0:${port}`);
     });
+
   } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);

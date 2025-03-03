@@ -1,26 +1,37 @@
 import type { Express } from "express";
+import express from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { insertThanksSchema, insertUserSchema } from "@shared/schema";
-import { hashPassword } from './utils'; // Assuming hashPassword function exists
+import { hashPassword } from "./auth"; // Import from auth.ts instead of utils.ts
+import cors from "cors";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Add CORS middleware
+  app.use(cors());
+
+  app.use(express.json());
+  app.use(express.urlencoded({ extended: false }));
+
   setupAuth(app);
-  app.use(express.json({ limit: '50mb', timeout: 120000 })); // 2 minute timeout
-  app.use(express.urlencoded({ extended: false, limit: '50mb', timeout: 120000 }));
+
+  // Add async error handling wrapper
+  const asyncHandler = (fn: any) => (req: any, res: any, next: any) => {
+    return Promise.resolve(fn(req, res, next)).catch(next);
+  };
 
   // Get all thanks (admin only)
-  app.get("/api/admin/thanks", async (req, res) => {
+  app.get("/api/admin/thanks", asyncHandler(async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     if (req.user!.role !== "admin") return res.sendStatus(403);
 
     const thanks = await storage.getAllThanks();
     res.json(thanks);
-  });
+  }));
 
   // Update thanks (admin only)
-  app.patch("/api/admin/thanks/:id", async (req, res) => {
+  app.patch("/api/admin/thanks/:id", asyncHandler(async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     if (req.user!.role !== "admin") return res.sendStatus(403);
 
@@ -37,27 +48,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       rejectReason: status === "rejected" ? rejectReason : null,
     });
     res.json(thanks);
-  });
+  }));
 
   // Delete thanks (admin only)
-  app.delete("/api/admin/thanks/:id", async (req, res) => {
+  app.delete("/api/admin/thanks/:id", asyncHandler(async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     if (req.user!.role !== "admin") return res.sendStatus(403);
 
     const id = parseInt(req.params.id);
     await storage.deleteThanks(id);
     res.sendStatus(200);
-  });
+  }));
 
   // Get all users (for user selection)
-  app.get("/api/users", async (req, res) => {
+  app.get("/api/users", asyncHandler(async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     const users = await storage.getAllUsers();
     res.json(users);
-  });
+  }));
 
   // Get users managed by a manager
-  app.get("/api/users/manager/:managerId", async (req, res) => {
+  app.get("/api/users/manager/:managerId", asyncHandler(async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     if (req.user!.role !== "manager") return res.sendStatus(403);
 
@@ -66,10 +77,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     const users = await storage.getUsersByManagerId(managerId);
     res.json(users);
-  });
+  }));
 
   // Update user's manager (admin only)
-  app.patch("/api/users/:userId/manager", async (req, res) => {
+  app.patch("/api/users/:userId/manager", asyncHandler(async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     if (req.user!.role !== "admin") return res.sendStatus(403);
 
@@ -78,10 +89,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     const user = await storage.updateUserManager(userId, managerId);
     res.json(user);
-  });
+  }));
 
   // Update user's role (admin only)
-  app.patch("/api/users/:userId/role", async (req, res) => {
+  app.patch("/api/users/:userId/role", asyncHandler(async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     if (req.user!.role !== "admin") return res.sendStatus(403);
 
@@ -95,10 +106,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     const user = await storage.updateUserRole(userId, role);
     res.json(user);
-  });
+  }));
 
   // Update user information (admin only)
-  app.patch("/api/users/:userId", async (req, res) => {
+  app.patch("/api/users/:userId", asyncHandler(async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     if (req.user!.role !== "admin") return res.sendStatus(403);
 
@@ -121,10 +132,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     const user = await storage.updateUserInfo(userId, { title, department, email });
     res.json(user);
-  });
+  }));
 
   // Delete user (admin only)
-  app.delete("/api/users/:userId", async (req, res) => {
+  app.delete("/api/users/:userId", asyncHandler(async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     if (req.user!.role !== "admin") return res.sendStatus(403);
 
@@ -149,10 +160,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error deleting user:", error);
       res.status(500).send("Không thể xóa nhân viên do có lỗi xảy ra");
     }
-  });
+  }));
 
   // Send thanks
-  app.post("/api/thanks", async (req, res) => {
+  app.post("/api/thanks", asyncHandler(async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
 
     const parsed = insertThanksSchema.safeParse(req.body);
@@ -164,10 +175,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     const thanks = await storage.createThanks(req.user!.id, parsed.data);
     res.json(thanks);
-  });
+  }));
 
   // Get pending approvals for manager
-  app.get("/api/approvals", async (req, res) => {
+  app.get("/api/approvals", asyncHandler(async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     if (req.user!.role !== "manager" && req.user!.role !== "admin") return res.sendStatus(403);
 
@@ -178,10 +189,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       approvals = await storage.getPendingThanksForManager(req.user!.id);
     }
     res.json(approvals);
-  });
+  }));
 
   // Approve/reject thanks
-  app.post("/api/thanks/:id/:action", async (req, res) => {
+  app.post("/api/thanks/:id/:action", asyncHandler(async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     if (req.user!.role !== "manager" && req.user!.role !== "admin") return res.sendStatus(403);
 
@@ -203,10 +214,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       reason
     );
     res.json(thanks);
-  });
+  }));
 
   // Get rankings
-  app.get("/api/rankings/:period", async (req, res) => {
+  app.get("/api/rankings/:period", asyncHandler(async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
 
     const period = req.params.period as "week" | "month" | "quarter" | "year";
@@ -216,10 +227,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     const rankings = await storage.getRankings(period);
     res.json(rankings);
-  });
+  }));
 
   // Get user stats
-  app.get("/api/stats/:userId", async (req, res) => {
+  app.get("/api/stats/:userId", asyncHandler(async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
 
     const userId = parseInt(req.params.userId);
@@ -229,10 +240,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     ]);
 
     res.json({ received, sent });
-  });
+  }));
 
   // Update the bulk import endpoint with proper validation
-  app.post("/api/users/bulk-import", async (req, res) => {
+  app.post("/api/users/bulk-import", asyncHandler(async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     if (req.user!.role !== "admin") return res.sendStatus(403);
 
@@ -320,10 +331,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Bulk import error:", error);
       res.status(500).send("Failed to import users");
     }
-  });
+  }));
 
   // Update the bulk update endpoint with proper validation
-  app.patch("/api/users/bulk-update", async (req, res) => {
+  app.patch("/api/users/bulk-update", asyncHandler(async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     if (req.user!.role !== "admin") return res.sendStatus(403);
 
@@ -398,11 +409,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Bulk update error:", error);
       res.status(500).send("Failed to update users");
     }
-  });
-
+  }));
 
   // Add new reset password endpoint
-  app.post("/api/users/:userId/reset-password", async (req, res) => {
+  app.post("/api/users/:userId/reset-password", asyncHandler(async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     if (req.user!.role !== "admin") return res.sendStatus(403);
 
@@ -432,7 +442,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Reset password error:", error);
       res.status(500).send("Không thể reset mật khẩu");
     }
-  });
+  }));
 
   const httpServer = createServer(app);
   return httpServer;
