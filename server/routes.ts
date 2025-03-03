@@ -133,8 +133,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(400).send("Cannot delete admin user");
     }
 
-    await storage.deleteUser(userId);
-    res.sendStatus(200);
+    try {
+      await storage.deleteUser(userId);
+      res.sendStatus(200);
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      res.status(500).send("Không thể xóa nhân viên do có lỗi xảy ra");
+    }
   });
 
   // Send thanks

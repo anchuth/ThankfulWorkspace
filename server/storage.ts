@@ -1,7 +1,7 @@
 import { InsertUser, User, Thanks, InsertThanks, users, thanks } from "@shared/schema";
 import session from "express-session";
 import { db } from "./db";
-import { eq, desc, and, gte, sql, inArray } from "drizzle-orm";
+import { eq, desc, and, gte, sql, inArray, or } from "drizzle-orm";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
 
@@ -235,6 +235,18 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
   async deleteUser(userId: number): Promise<void> {
+    // First delete all thanks sent by or to this user
+    await db
+      .delete(thanks)
+      .where(
+        or(
+          eq(thanks.fromId, userId),
+          eq(thanks.toId, userId),
+          eq(thanks.approvedById, userId)
+        )
+      );
+
+    // Then delete the user
     await db
       .delete(users)
       .where(eq(users.id, userId));
