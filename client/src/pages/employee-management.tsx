@@ -239,12 +239,12 @@ export default function EmployeeManagementPage() {
   const handleDownloadTemplate = () => {
     const template = [
       {
-        username: "mã_số_nhân_viên",
-        password: "mật_khẩu",
-        name: "họ_và_tên",
-        title: "chức_danh",
-        department: "bộ_phận",
-        role: "employee/manager",
+        username: "username",
+        email: "email@example.com",
+        first_name: "first_name",
+        last_name: "last_name",
+        department: "department",
+        position: "position"
       },
     ];
 
@@ -434,10 +434,11 @@ export default function EmployeeManagementPage() {
                         <Table>
                           <TableHeader>
                             <TableRow>
-                              <TableHead>Mã số</TableHead>
-                              <TableHead>Họ và tên</TableHead>
-                              <TableHead>Chức danh</TableHead>
-                              <TableHead>Bộ phận</TableHead>
+                              <TableHead>Username</TableHead>
+                              <TableHead>Email</TableHead>
+                              <TableHead>Họ</TableHead>
+                              <TableHead>Tên</TableHead>
+                              <TableHead>Phòng ban</TableHead>
                               <TableHead>Chức vụ</TableHead>
                             </TableRow>
                           </TableHeader>
@@ -445,10 +446,11 @@ export default function EmployeeManagementPage() {
                             {importData.map((item, index) => (
                               <TableRow key={index}>
                                 <TableCell>{item.username}</TableCell>
-                                <TableCell>{item.name}</TableCell>
-                                <TableCell>{item.title}</TableCell>
+                                <TableCell>{item.email}</TableCell>
+                                <TableCell>{item.first_name}</TableCell>
+                                <TableCell>{item.last_name}</TableCell>
                                 <TableCell>{item.department}</TableCell>
-                                <TableCell>{item.role}</TableCell>
+                                <TableCell>{item.position}</TableCell>
                               </TableRow>
                             ))}
                           </TableBody>

@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { insertThanksSchema } from "@shared/schema";
-import { insertUserSchema } from "@shared/schema"; // Added import for user schema
+import { insertUserSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
@@ -215,8 +215,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
+      // Transform imported data to match our schema
+      const transformedUsers = users.map(user => ({
+        username: user.username,
+        password: Math.random().toString(36).slice(-8), // Generate random password
+        name: `${user.first_name} ${user.last_name}`,
+        title: user.position,
+        department: user.department,
+        role: "employee", // Default role
+        email: user.email
+      }));
+
       // Validate each user
-      for (const user of users) {
+      for (const user of transformedUsers) {
         const parsed = insertUserSchema.safeParse(user);
         if (!parsed.success) {
           return res.status(400).json({
@@ -228,7 +239,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Insert all users
-      const createdUsers = await storage.createManyUsers(users);
+      const createdUsers = await storage.createManyUsers(transformedUsers);
       res.json(createdUsers);
     } catch (error) {
       console.error("Bulk import error:", error);
