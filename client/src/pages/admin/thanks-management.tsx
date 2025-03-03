@@ -36,7 +36,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -63,8 +68,8 @@ export default function ThanksManagementPage() {
 
   // Mutation để cập nhật lời cảm ơn
   const updateThanksMutation = useMutation({
-    mutationFn: async (data: { 
-      id: number; 
+    mutationFn: async (data: {
+      id: number;
       message: string;
       fromId: number;
       toId: number;
@@ -142,11 +147,12 @@ export default function ThanksManagementPage() {
           </p>
         </div>
 
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "all" | "history")}>
-          <TabsList>
+        <Tabs defaultValue="all" className="w-full space-y-6">
+          <TabsList className="grid w-full grid-cols-2 mb-4">
             <TabsTrigger value="all">Tất cả lời cảm ơn</TabsTrigger>
             <TabsTrigger value="history">Lịch sử duyệt</TabsTrigger>
           </TabsList>
+
           <TabsContent value="all" className="space-y-4">
             {/* Thanh công cụ */}
             <div className="flex items-center gap-4">
@@ -403,8 +409,8 @@ export default function ThanksManagementPage() {
                   value={selectedThanks?.status}
                   onValueChange={(value: "pending" | "approved" | "rejected") =>
                     setSelectedThanks((prev) =>
-                      prev ? { 
-                        ...prev, 
+                      prev ? {
+                        ...prev,
                         status: value,
                         approvedById: value === "approved" ? user?.id : null,
                         rejectReason: value === "rejected" ? prev.rejectReason : null
