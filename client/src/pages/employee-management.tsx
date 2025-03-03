@@ -320,6 +320,32 @@ export default function EmployeeManagementPage() {
     }
   });
 
+  // Add the bulk delete mutation near the other mutations
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("DELETE", "/api/users/bulk-delete");
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to delete users");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      toast({
+        title: "Xóa thành công",
+        description: "Đã xóa tất cả nhân viên (trừ admin)",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Lỗi xóa",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
+
   // Update bulk update form submit handler
   const onBulkUpdateSubmit = (data: BulkUpdateFormData) => {
     const updateData: {
@@ -796,6 +822,40 @@ export default function EmployeeManagementPage() {
                     </>
                   )}
                 </div>
+              </DialogContent>
+            </Dialog>
+          )}
+
+          {/* Add this to the toolbar section, after the import dialog */}
+          {user?.role === "admin" && (
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="destructive" className="gap-2">
+                  <Trash2 className="w-4 h-4" />
+                  Xóa tất cả nhân viên
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Xóa tất cả nhân viên</DialogTitle>
+                  <DialogDescription>
+                    Bạn có chắc chắn muốn xóa tất cả nhân viên? Thao tác này sẽ:
+                    <ul className="list-disc pl-4 mt-2 space-y-1">
+                      <li>Xóa tất cả nhân viên trừ tài khoản admin</li>
+                      <li>Không thể hoàn tác sau khi xóa</li>
+                      <li>Không xóa được nhân viên đang là quản lý của người khác</li>
+                    </ul>
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                  <Button
+                    variant="destructive"
+                    onClick={() => bulkDeleteMutation.mutate()}
+                    disabled={bulkDeleteMutation.isPending}
+                  >
+                    {bulkDeleteMutation.isPending ? "Đang xóa..." : "Xác nhận xóa tất cả"}
+                  </Button>
+                </DialogFooter>
               </DialogContent>
             </Dialog>
           )}

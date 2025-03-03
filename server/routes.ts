@@ -376,6 +376,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Thêm route xóa hàng loạt nhân viên (admin only)
+  app.delete("/api/users/bulk-delete", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (req.user!.role !== "admin") return res.sendStatus(403);
+
+    try {
+      // Lấy danh sách tất cả user trừ admin
+      const users = await storage.getAllUsers();
+      const nonAdminUsers = users.filter(u => u.role !== "admin");
+
+      // Kiểm tra các ràng buộc trước khi xóa
+      for (const user of nonAdminUsers) {
+        // Kiểm tra xem user có đang là manager của ai không
+        const employees = await storage.getUsersByManagerId(user.id);
+        if (employees.length > 0) {
+          return res.status(400).send("Không thể xóa nhân viên vì có người đang được quản lý bởi họ");
+        }
+      }
+
+      // Thực hiện xóa
+      const userIds = nonAdminUsers.map(u => u.id);
+      await storage.deleteManyUsers(userIds);
+
+      res.json({
+        success: true,
+        deletedCount: userIds.length
+      });
+    } catch (error) {
+      console.error("Bulk delete error:", error);
+      res.status(500).send("Failed to delete users");
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
