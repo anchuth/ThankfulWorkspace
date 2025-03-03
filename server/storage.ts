@@ -1,7 +1,7 @@
 import { InsertUser, User, Thanks, InsertThanks, users, thanks } from "@shared/schema";
 import session from "express-session";
 import { db } from "./db";
-import { eq, desc, and, gte } from "drizzle-orm";
+import { eq, desc, and, gte, sql, inArray } from "drizzle-orm";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
 
@@ -99,7 +99,7 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           eq(thanks.status, "pending"),
-          thanks.toId.in(managedUserIds)
+          inArray(thanks.toId, managedUserIds)
         )
       );
   }
