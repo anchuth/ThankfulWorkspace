@@ -585,7 +585,7 @@ function EmployeeManagementPage() {
                       <SelectContent>
                         <SelectItem value="unchanged">Giữ nguyên quản lý hiện tại</SelectItem>
                         <SelectItem value="none">Xóa quản lý</SelectItem>
-                        {managers?.map((manager) => (
+                        {managers?.filter(m => !selectedEmployees.includes(m.id)).map((manager) => (
                           <SelectItem key={manager.id} value={manager.id.toString()}>
                             {manager.name}
                           </SelectItem>
@@ -940,8 +940,6 @@ function EmployeeManagementPage() {
             </TableBody>
           </Table>
         </div>
-
-        {/* Pagination */}
         <div className="flex items-center justify-between mt-4">
           <div className="flex items-center gap-2">
             <Select
@@ -951,7 +949,7 @@ function EmployeeManagementPage() {
                 setCurrentPage(1);
               }}
             >
-              <SelectTrigger className="w-[100px]">
+              <SelectTrigger className="w-[70px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -961,69 +959,50 @@ function EmployeeManagementPage() {
                 <SelectItem value="100">100</SelectItem>
               </SelectContent>
             </Select>
-            <Label>dòng mỗi trang</Label>
+            <span className="text-sm text-muted-foreground">
+              Hiển thị {paginatedEmployees?.length || 0} / {totalFilteredItems} nhân viên
+            </span>
           </div>
-          <div className="text-sm text-muted-foreground">Trang {currentPage}/{totalPages} ({totalFilteredItems} nhân viên)
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(1)}
+              disabled={currentPage === 1}
+            >
+              Đầu
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(currentPage - 1)}
+              disabled={currentPage === 1}
+            >
+              Trước
+            </Button>
+            <span className="text-sm">
+              Trang {currentPage} / {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(currentPage + 1)}
+              disabled={currentPage === totalPages}
+            >
+              Sau
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(totalPages)}
+              disabled={currentPage === totalPages}
+            >
+              Cuối
+            </Button>
           </div>
         </div>
 
-        <div className="flex justify-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage(1)}
-            disabled={currentPage === 1}
-          >
-            Đầu
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-            disabled={currentPage === 1}
-          >
-            Trước
-          </Button>
-          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-            let pageNum;
-            if (totalPages <= 5) {
-              pageNum = i + 1;
-            } else if (currentPage <= 3) {
-              pageNum = i + 1;
-            } else if (currentPage >= totalPages - 2) {
-              pageNum = totalPages - 4 + i;
-            } else {
-              pageNum = currentPage - 2 + i;
-            }
-
-            return (
-              <Button
-                key={pageNum}
-                variant={currentPage === pageNum ? "default" : "outline"}
-                size="sm"
-                onClick={() => setCurrentPage(pageNum)}
-              >
-                {pageNum}
-              </Button>
-            );
-          })}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-            disabled={currentPage === totalPages}
-          >
-            Sau
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage(totalPages)}
-            disabled={currentPage === totalPages}
-          >
-            Cuối
-          </Button>
-        </div>
       </div>
     </Layout>
   );
