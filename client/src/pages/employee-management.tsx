@@ -433,7 +433,8 @@ export default function EmployeeManagementPage() {
     if (data.title?.trim()) updateData.title = data.title.trim();
     if (data.department?.trim()) updateData.department = data.department.trim();
     if (data.managerId && data.managerId !== "unchanged") {
-      updateData.managerId = data.managerId === "none" ? null : parseInt(data.managerId);
+      updateData.managerId = data.managerId === "none" ? null : 
+        (typeof data.managerId === 'number' ? data.managerId : parseInt(data.managerId));
     }
 
     bulkUpdateMutation.mutate(updateData);
@@ -939,7 +940,7 @@ export default function EmployeeManagementPage() {
                   <>
                     <span className="px-2 flex items-center">...</span>
                     <Button
-                      variant="outline"
+                                            variant="outline"
                       onClick={() => setCurrentPage(totalPages)}
                     >
                       {totalPages}
