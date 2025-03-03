@@ -21,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Input } from "@/components/ui/input"; // Added Input import
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -29,6 +30,8 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { insertThanksSchema, User } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { Search } from "lucide-react"; // Added Search icon import
+import { useState } from "react"; // Added useState import
 
 const TEMPLATE_MESSAGES = [
   {
@@ -69,6 +72,7 @@ export function SendThanks() {
   const { user } = useAuth();
   const { toast } = useToast();
   const { data: users } = useQuery<User[]>({ queryKey: ["/api/users"] });
+  const [searchTerm, setSearchTerm] = useState(""); // Added search state
 
   const form = useForm({
     resolver: zodResolver(insertThanksSchema),
@@ -91,6 +95,17 @@ export function SendThanks() {
         description: "Lời cảm ơn của bạn sẽ được quản lý xem xét.",
       });
     },
+  });
+
+  // Filter users based on search term
+  const filteredUsers = users?.filter((u) => {
+    if (!searchTerm) return true;
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      u.name.toLowerCase().includes(searchLower) ||
+      u.username.toLowerCase().includes(searchLower) ||
+      (u.department && u.department.toLowerCase().includes(searchLower))
+    );
   });
 
   return (
@@ -123,13 +138,35 @@ export function SendThanks() {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {users
-                        ?.filter((u) => u.id !== user!.id)
-                        .map((u) => (
-                          <SelectItem key={u.id} value={u.id.toString()}>
-                            {u.username}-{u.name}
-                          </SelectItem>
-                        ))}
+                      <div className="flex items-center gap-2 px-3 pb-2">
+                        <Search className="w-4 h-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Tìm kiếm theo tên, mã nhân viên hoặc bộ phận..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="h-8"
+                        />
+                      </div>
+                      <div className="max-h-[300px] overflow-y-auto">
+                        {filteredUsers
+                          ?.filter((u) => u.id !== user!.id)
+                          .map((u) => (
+                            <SelectItem
+                              key={u.id}
+                              value={u.id.toString()}
+                              className="flex flex-col items-start py-2"
+                            >
+                              <div className="font-medium">
+                                {u.name} ({u.username})
+                              </div>
+                              {u.department && (
+                                <div className="text-xs text-muted-foreground">
+                                  {u.department}
+                                </div>
+                              )}
+                            </SelectItem>
+                          ))}
+                      </div>
                     </SelectContent>
                   </Select>
                   <FormMessage />
