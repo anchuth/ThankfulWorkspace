@@ -332,10 +332,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
+      // Ensure all IDs are numbers
+      const numericIds = employeeIds.map(id => 
+        typeof id === 'string' ? parseInt(id, 10) : id
+      ).filter(id => !isNaN(id));
+
+      if (numericIds.length === 0) {
+        return res.status(400).send("No valid employee IDs provided");
+      }
+
       // Don't allow updating admin users
       const users = await storage.getAllUsers();
       const adminIds = new Set(users.filter(u => u.role === "admin").map(u => u.id));
-      const validIds = employeeIds.filter(id => !adminIds.has(id));
+      const validIds = numericIds.filter(id => !adminIds.has(id));
 
       if (validIds.length === 0) {
         return res.status(400).send("Cannot update admin users");
@@ -354,8 +363,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Only update managerId if it's explicitly set
       if (managerId !== undefined && managerId !== "unchanged") {
-        updateData.managerId = managerId === "none" ? null :
-          (typeof managerId === 'number' ? managerId : parseInt(managerId));
+        if (managerId === "none" || managerId === null) {
+          updateData.managerId = null;
+        } else {
+          const managerIdNum = typeof managerId === 'string' ? parseInt(managerId, 10) : managerId;
+          if (!isNaN(managerIdNum)) {
+            updateData.managerId = managerIdNum;
+          }
+        }
       }
 
       // Validate managerId if set
