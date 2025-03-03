@@ -16,6 +16,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(thanks);
   });
 
+  // Update thanks (admin only)
+  app.patch("/api/admin/thanks/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (req.user!.role !== "admin") return res.sendStatus(403);
+
+    const id = parseInt(req.params.id);
+    const { message, points } = req.body;
+
+    const thanks = await storage.updateThanksContent(id, { message, points });
+    res.json(thanks);
+  });
+
+  // Delete thanks (admin only)
+  app.delete("/api/admin/thanks/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (req.user!.role !== "admin") return res.sendStatus(403);
+
+    const id = parseInt(req.params.id);
+    await storage.deleteThanks(id);
+    res.sendStatus(200);
+  });
+
   // Get all users (for user selection)
   app.get("/api/users", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);

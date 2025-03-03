@@ -1,6 +1,6 @@
 import { Layout } from "@/components/layout";
 import { useAuth } from "@/hooks/use-auth";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Thanks, User } from "@shared/schema";
 import {
   Table,
@@ -12,26 +12,32 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { apiRequest } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import { formatDistance } from "date-fns";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Search, Edit2, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Redirect } from "wouter";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 const ITEMS_PER_PAGE = 10;
 
 export default function ThanksManagementPage() {
   const { user } = useAuth();
-  const [currentPage, setCurrentPage] = useState(1);
+  const { toast } = useToast();
+  const [selectedThanks, setSelectedThanks] = useState<Thanks | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Redirect if not admin
   if (user?.role !== "admin") {
@@ -46,21 +52,51 @@ export default function ThanksManagementPage() {
     queryKey: ["/api/users"],
   });
 
-  // Filter and paginate thanks
-  const filteredThanks = allThanks?.filter(thanks => {
-    const fromUser = users?.find(u => u.id === thanks.fromId);
-    const toUser = users?.find(u => u.id === thanks.toId);
-    
-    const matchesSearch = 
+  // Mutation để cập nhật lời cảm ơn
+  const updateThanksMutation = useMutation({
+    mutationFn: async (data: { id: number; message: string; points: number }) => {
+      const res = await apiRequest("PATCH", `/api/admin/thanks/${data.id}`, {
+        message: data.message,
+        points: data.points,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/thanks"] });
+      setSelectedThanks(null);
+      toast({
+        title: "Cập nhật thành công",
+        description: "Đã cập nhật lời cảm ơn",
+      });
+    },
+  });
+
+  // Mutation để xóa lời cảm ơn
+  const deleteThanksMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("DELETE", `/api/admin/thanks/${id}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/thanks"] });
+      toast({
+        title: "Xóa thành công",
+        description: "Đã xóa lời cảm ơn",
+      });
+    },
+  });
+
+  // Filter thanks based on search term
+  const filteredThanks = allThanks?.filter((thanks) => {
+    const fromUser = users?.find((u) => u.id === thanks.fromId);
+    const toUser = users?.find((u) => u.id === thanks.toId);
+
+    return (
       searchTerm === "" ||
       fromUser?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       toUser?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      thanks.message.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesStatus = 
-      filterStatus === "all" || thanks.status === filterStatus;
-
-    return matchesSearch && matchesStatus;
+      thanks.message.toLowerCase().includes(searchTerm.toLowerCase())
+    );
   });
 
   const totalPages = Math.ceil((filteredThanks?.length || 0) / ITEMS_PER_PAGE);
@@ -80,7 +116,7 @@ export default function ThanksManagementPage() {
         </div>
 
         {/* Thanh công cụ */}
-        <div className="flex items-center gap-4 flex-wrap">
+        <div className="flex items-center gap-4">
           <div className="flex-1 flex items-center gap-2">
             <Search className="w-4 h-4 text-muted-foreground" />
             <Input
@@ -90,18 +126,6 @@ export default function ThanksManagementPage() {
               className="max-w-xs"
             />
           </div>
-
-          <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Lọc theo trạng thái" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tất cả trạng thái</SelectItem>
-              <SelectItem value="pending">Chờ duyệt</SelectItem>
-              <SelectItem value="approved">Đã duyệt</SelectItem>
-              <SelectItem value="rejected">Từ chối</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
 
         <div className="rounded-md border">
@@ -111,16 +135,16 @@ export default function ThanksManagementPage() {
                 <TableHead>Người gửi</TableHead>
                 <TableHead>Người nhận</TableHead>
                 <TableHead>Nội dung</TableHead>
+                <TableHead>Điểm</TableHead>
                 <TableHead>Trạng thái</TableHead>
-                <TableHead>Người duyệt</TableHead>
                 <TableHead>Thời gian</TableHead>
+                <TableHead>Thao tác</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {paginatedThanks?.map((thanks) => {
-                const fromUser = users?.find(u => u.id === thanks.fromId);
-                const toUser = users?.find(u => u.id === thanks.toId);
-                const approvedBy = users?.find(u => u.id === thanks.approvedById);
+                const fromUser = users?.find((u) => u.id === thanks.fromId);
+                const toUser = users?.find((u) => u.id === thanks.toId);
 
                 return (
                   <TableRow key={thanks.id}>
@@ -141,6 +165,7 @@ export default function ThanksManagementPage() {
                     <TableCell className="max-w-md">
                       <div className="line-clamp-2">{thanks.message}</div>
                     </TableCell>
+                    <TableCell>{thanks.points}</TableCell>
                     <TableCell>
                       <Badge
                         variant={
@@ -157,19 +182,33 @@ export default function ThanksManagementPage() {
                           ? "Đã duyệt"
                           : "Từ chối"}
                       </Badge>
-                      {thanks.status === "rejected" && thanks.rejectReason && (
-                        <p className="text-sm text-destructive mt-1">
-                          Lý do: {thanks.rejectReason}
-                        </p>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {approvedBy?.name || "N/A"}
                     </TableCell>
                     <TableCell>
                       {formatDistance(new Date(thanks.createdAt), new Date(), {
                         addSuffix: true,
                       })}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSelectedThanks(thanks)}
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => {
+                            if (confirm("Bạn có chắc chắn muốn xóa lời cảm ơn này?")) {
+                              deleteThanksMutation.mutate(thanks.id);
+                            }
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
@@ -178,12 +217,65 @@ export default function ThanksManagementPage() {
           </Table>
         </div>
 
+        {/* Dialog chỉnh sửa lời cảm ơn */}
+        <Dialog open={!!selectedThanks} onOpenChange={(open) => !open && setSelectedThanks(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Chỉnh sửa lời cảm ơn</DialogTitle>
+              <DialogDescription>
+                Chỉnh sửa nội dung và điểm thưởng cho lời cảm ơn
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Nội dung</Label>
+                <Input
+                  value={selectedThanks?.message || ""}
+                  onChange={(e) =>
+                    setSelectedThanks((prev) =>
+                      prev ? { ...prev, message: e.target.value } : null
+                    )
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Điểm thưởng</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={selectedThanks?.points || 1}
+                  onChange={(e) =>
+                    setSelectedThanks((prev) =>
+                      prev ? { ...prev, points: parseInt(e.target.value) } : null
+                    )
+                  }
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                onClick={() => {
+                  if (!selectedThanks) return;
+                  updateThanksMutation.mutate({
+                    id: selectedThanks.id,
+                    message: selectedThanks.message,
+                    points: selectedThanks.points,
+                  });
+                }}
+                disabled={updateThanksMutation.isPending}
+              >
+                {updateThanksMutation.isPending ? "Đang cập nhật..." : "Lưu thay đổi"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         {/* Phân trang */}
         {totalPages > 1 && (
           <div className="flex justify-center gap-2">
             <Button
               variant="outline"
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={currentPage === 1}
             >
               Trang trước
@@ -199,7 +291,7 @@ export default function ThanksManagementPage() {
             ))}
             <Button
               variant="outline"
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
             >
               Trang sau
