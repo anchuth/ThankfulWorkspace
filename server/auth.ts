@@ -88,10 +88,12 @@ export function setupAuth(app: Express) {
         return res.status(400).send("Employee ID already exists");
       }
 
+      // Set initial role as employee
       const hashedPassword = await hashPassword(req.body.password);
       const user = await storage.createUser({
         ...req.body,
         password: hashedPassword,
+        role: "employee", // Explicitly set role
       });
 
       req.login(user, (err) => {
