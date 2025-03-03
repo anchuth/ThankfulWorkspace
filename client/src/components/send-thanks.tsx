@@ -30,6 +30,17 @@ import { insertThanksSchema, User } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
+const TEMPLATE_MESSAGES = [
+  "Cảm ơn bạn đã hỗ trợ tôi hoàn thành dự án đúng hạn",
+  "Cảm ơn bạn đã giúp đỡ tôi giải quyết vấn đề kỹ thuật",
+  "Cảm ơn bạn đã chia sẻ kiến thức và kinh nghiệm quý báu",
+  "Cảm ơn bạn đã đóng góp ý kiến xây dựng cho team",
+  "Cảm ơn bạn đã nhiệt tình hướng dẫn thành viên mới",
+  "Cảm ơn bạn đã tận tâm phục vụ khách hàng",
+  "Cảm ơn bạn đã đề xuất giải pháp sáng tạo",
+  "Cảm ơn bạn đã là một teammate tuyệt vời"
+];
+
 export function SendThanks() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -52,8 +63,8 @@ export function SendThanks() {
       queryClient.invalidateQueries({ queryKey: [`/api/stats/${user!.id}`] });
       form.reset();
       toast({
-        title: "Thanks sent!",
-        description: "Your message will be reviewed by their manager.",
+        title: "Gửi lời cảm ơn thành công!",
+        description: "Lời cảm ơn của bạn sẽ được quản lý xem xét.",
       });
     },
   });
@@ -61,9 +72,9 @@ export function SendThanks() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Send Thanks</CardTitle>
+        <CardTitle>Gửi lời cảm ơn</CardTitle>
         <CardDescription>
-          Show appreciation to your colleagues for their hard work
+          Ghi nhận sự đóng góp của đồng nghiệp
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -77,14 +88,14 @@ export function SendThanks() {
               name="toId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Recipient</FormLabel>
+                  <FormLabel>Người nhận</FormLabel>
                   <Select
                     onValueChange={(val) => field.onChange(parseInt(val))}
                     value={field.value?.toString()}
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a colleague" />
+                        <SelectValue placeholder="Chọn đồng nghiệp" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -92,7 +103,7 @@ export function SendThanks() {
                         ?.filter((u) => u.id !== user!.id)
                         .map((u) => (
                           <SelectItem key={u.id} value={u.id.toString()}>
-                            {u.name}
+                            {u.username}-{u.name}
                           </SelectItem>
                         ))}
                     </SelectContent>
@@ -101,15 +112,33 @@ export function SendThanks() {
                 </FormItem>
               )}
             />
+
+            <div className="space-y-2">
+              <FormLabel>Lời cảm ơn mẫu</FormLabel>
+              <div className="grid grid-cols-2 gap-2">
+                {TEMPLATE_MESSAGES.map((message, index) => (
+                  <Button
+                    key={index}
+                    type="button"
+                    variant="outline"
+                    className="h-auto py-2 px-3 whitespace-normal text-left justify-start"
+                    onClick={() => form.setValue("message", message)}
+                  >
+                    {message}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
             <FormField
               control={form.control}
               name="message"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Message</FormLabel>
+                  <FormLabel>Lời nhắn</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Write your thank you message..."
+                      placeholder="Viết lời cảm ơn của bạn..."
                       className="resize-none"
                       {...field}
                     />
@@ -119,7 +148,7 @@ export function SendThanks() {
               )}
             />
             <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? "Sending..." : "Send Thanks"}
+              {mutation.isPending ? "Đang gửi..." : "Gửi lời cảm ơn"}
             </Button>
           </form>
         </Form>
