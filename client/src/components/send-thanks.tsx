@@ -31,14 +31,38 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 const TEMPLATE_MESSAGES = [
-  "Cảm ơn bạn đã hỗ trợ tôi hoàn thành dự án đúng hạn",
-  "Cảm ơn bạn đã giúp đỡ tôi giải quyết vấn đề kỹ thuật",
-  "Cảm ơn bạn đã chia sẻ kiến thức và kinh nghiệm quý báu",
-  "Cảm ơn bạn đã đóng góp ý kiến xây dựng cho team",
-  "Cảm ơn bạn đã nhiệt tình hướng dẫn thành viên mới",
-  "Cảm ơn bạn đã tận tâm phục vụ khách hàng",
-  "Cảm ơn bạn đã đề xuất giải pháp sáng tạo",
-  "Cảm ơn bạn đã là một teammate tuyệt vời"
+  {
+    label: "Hoàn thành dự án",
+    message: "Cảm ơn bạn đã tích cực hỗ trợ và đóng góp để team chúng ta hoàn thành dự án đúng tiến độ. Sự chuyên nghiệp và tinh thần trách nhiệm của bạn đã góp phần quan trọng vào thành công của dự án. Rất mong được tiếp tục hợp tác với bạn trong các dự án sắp tới."
+  },
+  {
+    label: "Hỗ trợ kỹ thuật",
+    message: "Cảm ơn bạn đã nhiệt tình hỗ trợ tôi giải quyết các vấn đề kỹ thuật phức tạp. Kiến thức chuyên môn và sự kiên nhẫn của bạn đã giúp tôi hiểu rõ hơn về vấn đề và tìm ra giải pháp phù hợp. Bạn thực sự là một đồng nghiệp tuyệt vời."
+  },
+  {
+    label: "Chia sẻ kiến thức",
+    message: "Cảm ơn bạn đã dành thời gian chia sẻ những kiến thức và kinh nghiệm quý báu. Những buổi trao đổi với bạn luôn mang lại nhiều giá trị và giúp tôi phát triển kỹ năng chuyên môn. Tôi rất trân trọng sự tận tâm và nhiệt huyết của bạn."
+  },
+  {
+    label: "Đóng góp ý kiến",
+    message: "Cảm ơn bạn đã đóng góp những ý kiến xây dựng và góc nhìn mới mẻ cho team. Những phản hồi chi tiết và thẳng thắn của bạn đã giúp cải thiện chất lượng công việc và tạo ra những thay đổi tích cực. Rất vui vì có bạn trong team."
+  },
+  {
+    label: "Hướng dẫn nhân viên mới",
+    message: "Cảm ơn bạn đã nhiệt tình hướng dẫn và hỗ trợ các thành viên mới trong team. Sự tận tâm và kiên nhẫn của bạn đã giúp họ nhanh chóng hòa nhập và phát huy được năng lực. Bạn là một tấm gương về tinh thần mentoring."
+  },
+  {
+    label: "Chăm sóc khách hàng",
+    message: "Cảm ơn bạn đã luôn tận tâm phục vụ và chăm sóc khách hàng. Thái độ chuyên nghiệp và sự chu đáo của bạn đã góp phần tạo nên hình ảnh tốt đẹp của công ty trong mắt khách hàng. Rất tự hào vì có bạn trong đội ngũ."
+  },
+  {
+    label: "Sáng tạo giải pháp",
+    message: "Cảm ơn bạn đã đề xuất những giải pháp sáng tạo và hiệu quả cho các thách thức của dự án. Tư duy đổi mới và khả năng giải quyết vấn đề của bạn đã mang lại nhiều giá trị cho team và công ty. Mong rằng bạn sẽ tiếp tục phát huy."
+  },
+  {
+    label: "Tinh thần đồng đội",
+    message: "Cảm ơn bạn đã là một đồng nghiệp tuyệt vời với tinh thần đồng đội cao. Sự nhiệt tình, thân thiện và sẵn sàng hỗ trợ của bạn đã góp phần tạo nên môi trường làm việc tích cực và gắn kết. Rất may mắn vì được làm việc cùng bạn."
+  }
 ];
 
 export function SendThanks() {
@@ -113,36 +137,37 @@ export function SendThanks() {
               )}
             />
 
-            <div className="space-y-2">
-              <FormLabel>Lời cảm ơn mẫu</FormLabel>
-              <div className="grid grid-cols-2 gap-2">
-                {TEMPLATE_MESSAGES.map((message, index) => (
-                  <Button
-                    key={index}
-                    type="button"
-                    variant="outline"
-                    className="h-auto py-2 px-3 whitespace-normal text-left justify-start"
-                    onClick={() => form.setValue("message", message)}
-                  >
-                    {message}
-                  </Button>
-                ))}
-              </div>
-            </div>
-
             <FormField
               control={form.control}
               name="message"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Lời nhắn</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Viết lời cảm ơn của bạn..."
-                      className="resize-none"
-                      {...field}
-                    />
-                  </FormControl>
+                  <div className="space-y-2">
+                    <Select
+                      onValueChange={(message) => form.setValue("message", message)}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Chọn lời cảm ơn mẫu" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {TEMPLATE_MESSAGES.map((template, index) => (
+                          <SelectItem key={index} value={template.message}>
+                            {template.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Viết lời cảm ơn của bạn..."
+                        className="resize-none min-h-[100px]"
+                        {...field}
+                      />
+                    </FormControl>
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
